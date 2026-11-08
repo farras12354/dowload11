@@ -202,9 +202,13 @@ function collectDownloadItems(data) {
 
   // TikTok: data.downloads[]
   if (Array.isArray(d.downloads)) {
-    d.downloads.forEach(dl => {
-      if (dl.sourceUrl) {
-        push('Video HD', 'Tanpa watermark', 'Kualitas terbaik langsung dari CDN', dl.sourceUrl, true);
+    d.downloads.forEach((dl, i) => {
+      const primaryUrl = dl.url || dl.sourceUrl;
+      if (primaryUrl) {
+        push('Video HD', 'Tanpa watermark', 'Kualitas terbaik tanpa watermark', primaryUrl, i === 0);
+      }
+      if (dl.sourceUrl && dl.sourceUrl !== dl.url) {
+        push('Video HD (Cadangan CDN)', 'MP4', 'Link cadangan server TikTok', dl.sourceUrl, false);
       }
     });
   }
@@ -284,7 +288,7 @@ function createDownloadItem({ label, badge, desc, url, isPrimary }) {
       </div>
       ${desc ? `<div class="dl-desc">${esc(desc)}</div>` : ''}
     </div>
-    <a class="btn-dl ${isPrimary ? 'primary-btn' : ''}" href="/api/download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(label + '.' + (isAudio ? 'mp3' : 'mp4'))}" download="${esc(label)}.${isAudio ? 'mp3' : 'mp4'}" onclick="startDownload(event, '${esc(url)}', '${esc(label)}')">
+    <a class="btn-dl ${isPrimary ? 'primary-btn' : ''}" href="${esc(url)}" download="${esc(label)}.${isAudio ? 'mp3' : 'mp4'}" onclick="startDownload(event, '${esc(url)}', '${esc(label)}')">
       ${dlSvg}
       Unduh
     </a>
@@ -315,26 +319,37 @@ function hideResult()  { document.getElementById('result').style.display  = 'non
 
 function startDownload(e, url, label) {
   if (e && e.preventDefault) e.preventDefault();
-  
+
   const cleanUrl = url.split('?')[0];
   const ext = cleanUrl.split('.').pop().toLowerCase();
   const lower = (label || '').toLowerCase();
   const isAudio = ['mp3', 'aac', 'ogg', 'm4a'].includes(ext) || lower.includes('audio') || lower.includes('musik');
   const fileExt = isAudio ? 'mp3' : 'mp4';
-  const safeName = (label || 'video').replace(/[/\\?%*:|"<>]/g, '_').trim() || 'Droply';
-  const filename = `${safeName}.${fileExt}`;
 
-  const downloadUrl = `/api/download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(filename)}`;
+  const videoTitle = document.getElementById('resultTitle')?.textContent || '';
+  const baseTitle = videoTitle && videoTitle !== '—' ? videoTitle : (label || 'video');
+  const safeName = baseTitle.replace(/[/\\?%*:|"<>]/g, '_').trim().slice(0, 50) || 'Droply';
+  const filename = `${safeName}_${Date.now()}.${fileExt}`;
 
-  // Gunakan hidden iframe agar browser langsung mendownload tanpa pindah halaman atau buka tab baru
-  let frame = document.getElementById('dl-hidden-frame');
-  if (!frame) {
-    frame = document.createElement('iframe');
-    frame.id = 'dl-hidden-frame';
-    frame.style.display = 'none';
-    document.body.appendChild(frame);
+  // Tentukan URL download
+  let targetDownloadUrl = url;
+  if (!url.includes('jagoanproject.com/api/dl-')) {
+    targetDownloadUrl = `/api/download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(filename)}`;
+  } else {
+    const sep = url.includes('?') ? '&' : '?';
+    targetDownloadUrl = url + sep + '_dl=' + Date.now();
   }
-  frame.src = downloadUrl;
+
+  // Trigger download tanpa pindah halaman dan bisa berulang kali
+  const a = document.createElement('a');
+  a.href = targetDownloadUrl;
+  a.setAttribute('download', filename);
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    try { document.body.removeChild(a); } catch (err) {}
+  }, 1000);
 }
 
 // Fallback jika masih dipanggil
