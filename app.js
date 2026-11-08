@@ -202,15 +202,13 @@ function collectDownloadItems(data) {
 
   // TikTok: data.downloads[]
   if (Array.isArray(d.downloads)) {
-    d.downloads.forEach((dl, i) => {
+    const dl = d.downloads[0];
+    if (dl) {
       const primaryUrl = dl.url || dl.sourceUrl;
       if (primaryUrl) {
-        push('Video HD', 'Tanpa watermark', 'Kualitas terbaik tanpa watermark', primaryUrl, i === 0);
+        push('Video HD', 'Tanpa watermark', 'Kualitas terbaik tanpa watermark', primaryUrl, true);
       }
-      if (dl.sourceUrl && dl.sourceUrl !== dl.url) {
-        push('Video HD (Cadangan CDN)', 'MP4', 'Link cadangan server TikTok', dl.sourceUrl, false);
-      }
-    });
+    }
   }
 
   // Instagram: result.media.videos[]
@@ -288,7 +286,7 @@ function createDownloadItem({ label, badge, desc, url, isPrimary }) {
       </div>
       ${desc ? `<div class="dl-desc">${esc(desc)}</div>` : ''}
     </div>
-    <a class="btn-dl ${isPrimary ? 'primary-btn' : ''}" href="${esc(url)}" download="${esc(label)}.${isAudio ? 'mp3' : 'mp4'}" onclick="startDownload(event, '${esc(url)}', '${esc(label)}')">
+    <a class="btn-dl primary-btn" href="${esc(url)}" download="${esc(label)}.${isAudio ? 'mp3' : 'mp4'}" onclick="startDownload(event, '${esc(url)}', '${esc(label)}')">
       ${dlSvg}
       Unduh
     </a>
@@ -331,13 +329,10 @@ function startDownload(e, url, label) {
   const safeName = baseTitle.replace(/[/\\?%*:|"<>]/g, '_').trim().slice(0, 50) || 'Droply';
   const filename = `${safeName}_${Date.now()}.${fileExt}`;
 
-  // Tentukan URL download
+  // Tentukan URL download asli tanpa merusak signature token
   let targetDownloadUrl = url;
   if (!url.includes('jagoanproject.com/api/dl-')) {
     targetDownloadUrl = `/api/download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(filename)}`;
-  } else {
-    const sep = url.includes('?') ? '&' : '?';
-    targetDownloadUrl = url + sep + '_dl=' + Date.now();
   }
 
   // Trigger download tanpa pindah halaman dan bisa berulang kali
