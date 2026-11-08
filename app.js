@@ -157,13 +157,27 @@ function renderResult(data, platformLabel) {
 
   const items = collectDownloadItems(data);
 
+  // Cari URL video yang bisa diputar (streamable preview URL tanpa header attachment)
+  const d = data.data || data;
+  let previewVideoUrl = '';
+  if (Array.isArray(d.downloads) && d.downloads[0]?.sourceUrl) {
+    previewVideoUrl = d.downloads[0].sourceUrl;
+  }
+  if (!previewVideoUrl) {
+    previewVideoUrl = d.play || d.video || d.videoUrl || d.video_url || d.media?.videos?.[0]?.url || '';
+  }
+  if (!previewVideoUrl) {
+    const fallbackItem = items.find(i => typeof i.url === 'string' && !i.url.includes('jagoanproject.com/api/dl-') && (i.url.includes('.mp4') || i.label.toLowerCase().includes('video')));
+    if (fallbackItem) previewVideoUrl = fallbackItem.url;
+  }
+
   const videoWrap = document.getElementById('videoWrap');
-  const videoItem = items.find(i => typeof i.url === 'string' && (i.url.includes('.mp4') || i.label.toLowerCase().includes('video')));
-  if (videoItem) {
+  if (previewVideoUrl) {
     videoWrap.style.display = 'block';
     videoWrap.innerHTML = `
-      <video class="video-preview" controls preload="metadata">
-        <source src="${esc(videoItem.url)}" type="video/mp4">
+      <video class="video-preview" controls playsinline preload="metadata" referrerpolicy="no-referrer">
+        <source src="${esc(previewVideoUrl)}" type="video/mp4">
+        Browser Anda tidak mendukung pemutar video ini.
       </video>`;
   } else {
     videoWrap.style.display = 'none';
