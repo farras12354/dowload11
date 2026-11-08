@@ -284,7 +284,7 @@ function createDownloadItem({ label, badge, desc, url, isPrimary }) {
       </div>
       ${desc ? `<div class="dl-desc">${esc(desc)}</div>` : ''}
     </div>
-    <a class="btn-dl ${isPrimary ? 'primary-btn' : ''}" href="${esc(url)}" target="_blank" rel="noopener noreferrer" download>
+    <a class="btn-dl ${isPrimary ? 'primary-btn' : ''}" href="/api/download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(label + '.' + (isAudio ? 'mp3' : 'mp4'))}" download="${esc(label)}.${isAudio ? 'mp3' : 'mp4'}" onclick="startDownload(event, '${esc(url)}', '${esc(label)}')">
       ${dlSvg}
       Unduh
     </a>
@@ -313,30 +313,32 @@ function showNotice(msg, type = 'info') {
 function hideNotice() { document.getElementById('notice').style.display = 'none'; }
 function hideResult()  { document.getElementById('result').style.display  = 'none'; }
 
-async function forceDownload(url, label) {
-  try {
-    const res = await fetch(url);
-    const blob = await res.blob();
-    const ext = url.split('?')[0].split('.').pop().toLowerCase() || 'mp4';
-    const filename = `${label.replace(/[^a-z0-9]/gi, '_')}.${ext}`;
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(a.href);
-  } catch (e) {
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = label;
-    a.target = '_blank';
-    a.rel = 'noopener';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+function startDownload(e, url, label) {
+  if (e && e.preventDefault) e.preventDefault();
+  
+  const cleanUrl = url.split('?')[0];
+  const ext = cleanUrl.split('.').pop().toLowerCase();
+  const lower = (label || '').toLowerCase();
+  const isAudio = ['mp3', 'aac', 'ogg', 'm4a'].includes(ext) || lower.includes('audio') || lower.includes('musik');
+  const fileExt = isAudio ? 'mp3' : 'mp4';
+  const safeName = (label || 'video').replace(/[/\\?%*:|"<>]/g, '_').trim() || 'Droply';
+  const filename = `${safeName}.${fileExt}`;
+
+  const downloadUrl = `/api/download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(filename)}`;
+
+  // Gunakan hidden iframe agar browser langsung mendownload tanpa pindah halaman atau buka tab baru
+  let frame = document.getElementById('dl-hidden-frame');
+  if (!frame) {
+    frame = document.createElement('iframe');
+    frame.id = 'dl-hidden-frame';
+    frame.style.display = 'none';
+    document.body.appendChild(frame);
   }
+  frame.src = downloadUrl;
 }
+
+// Fallback jika masih dipanggil
+const forceDownload = (url, label) => startDownload(null, url, label);
 
 // Mobile navigation toggle
 const navToggle = document.getElementById('navToggle');
