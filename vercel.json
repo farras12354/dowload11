@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/downloader/:endpoint*",
+      "destination": "/api/downloader/[endpoint]"
+    }
+  ]
+}
