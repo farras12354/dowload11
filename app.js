@@ -284,10 +284,10 @@ function createDownloadItem({ label, badge, desc, url, isPrimary }) {
       </div>
       ${desc ? `<div class="dl-desc">${esc(desc)}</div>` : ''}
     </div>
-    <button class="btn-dl ${isPrimary ? 'primary-btn' : ''}" onclick="forceDownload('${esc(url)}', '${esc(label)}')">
+    <a class="btn-dl ${isPrimary ? 'primary-btn' : ''}" href="${esc(url)}" target="_blank" rel="noopener noreferrer" download>
       ${dlSvg}
       Unduh
-    </button>
+    </a>
   `;
   return el;
 }
