@@ -300,7 +300,7 @@ function setLoading(on, customText = 'Memproses...') {
   btn.disabled          = on;
   spinner.style.display = on ? 'block' : 'none';
   icon.style.display    = on ? 'none'  : 'block';
-  text.textContent      = on ? customText : 'Download';
+  text.textContent      = on ? customText : 'Cari';
 }
 
 function showNotice(msg, type = 'info') {
