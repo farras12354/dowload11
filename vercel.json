@@ -1,8 +1,12 @@
 {
   "rewrites": [
     {
-      "source": "/api/downloader/:endpoint*",
-      "destination": "/api/downloader/[endpoint]"
+      "source": "/api/downloader/:endpoint",
+      "destination": "/api/downloader/[endpoint]?endpoint=:endpoint"
+    },
+    {
+      "source": "/api/download",
+      "destination": "/api/download"
     }
   ]
 }
