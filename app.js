@@ -343,11 +343,8 @@ function startDownload(e, url, label) {
   const safeName = baseTitle.replace(/[/\\?%*:|"<>]/g, '_').trim().slice(0, 50) || 'Droply';
   const filename = `${safeName}_${Date.now()}.${fileExt}`;
 
-  // Tentukan URL download asli tanpa merusak signature token
-  let targetDownloadUrl = url;
-  if (!url.includes('jagoanproject.com/api/dl-')) {
-    targetDownloadUrl = `/api/download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(filename)}`;
-  }
+  // Semua URL lewat proxy /api/download supaya tidak pindah halaman
+  const targetDownloadUrl = `/api/download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(filename)}`;
 
   // Trigger download tanpa pindah halaman dan bisa berulang kali
   const a = document.createElement('a');
