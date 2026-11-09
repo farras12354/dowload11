@@ -1,16 +1,18 @@
 const BASE = '/api/downloader';
 
 const PLATFORM_MAP = {
-  tiktok:    { endpoint: 'tiktok',            label: 'TikTok' },
-  instagram: { endpoint: 'instagram',         label: 'Instagram' },
-  youtube:   { endpoint: 'youtube-download',  label: 'YouTube' },
-  twitter:   { endpoint: 'twitter',           label: 'Twitter / X' },
-  facebook:  { endpoint: 'facebook',          label: 'Facebook' },
-  threads:   { endpoint: 'threads',           label: 'Threads' },
-  pinterest: { endpoint: 'pinterest',         label: 'Pinterest' },
+  tiktok:    { endpoint: 'tiktok',           label: 'TikTok' },
+  instagram: { endpoint: 'instagram',        label: 'Instagram' },
+  youtube:   { endpoint: 'youtube-download', label: 'YouTube' },
+  twitter:   { endpoint: 'twitter',          label: 'Twitter / X' },
+  facebook:  { endpoint: 'facebook',         label: 'Facebook' },
+  threads:   { endpoint: 'threads',          label: 'Threads' },
+  pinterest: { endpoint: 'pinterest',        label: 'Pinterest' },
 };
 
 let activePlatform = 'tiktok';
+let _lastSourceUrl = '';
+let _lastEndpoint  = '';
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
@@ -20,7 +22,6 @@ document.querySelectorAll('.platform-btn').forEach(btn => {
     document.querySelectorAll('.platform-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     activePlatform = btn.dataset.platform;
-
     const hints = {
       tiktok:    'https://www.tiktok.com/@user/video/...',
       instagram: 'https://www.instagram.com/p/... atau /reel/...',
@@ -36,7 +37,7 @@ document.querySelectorAll('.platform-btn').forEach(btn => {
   });
 });
 
-// Auto-detect platform from pasted URL
+// Auto-detect platform dari URL yang di-paste
 document.getElementById('urlInput').addEventListener('paste', e => {
   setTimeout(() => {
     const val = e.target.value;
@@ -60,7 +61,7 @@ document.getElementById('urlInput').addEventListener('paste', e => {
   }, 0);
 });
 
-// Enter key trigger
+// Enter key
 document.getElementById('urlInput').addEventListener('keydown', e => {
   if (e.key === 'Enter') fetchDownload();
 });
@@ -69,6 +70,7 @@ async function fetchDownload() {
   const inputVal = document.getElementById('urlInput').value.trim();
   if (!inputVal) { showNotice('Masukkan tautan video terlebih dahulu.', 'error'); return; }
 
+  // Auto-detect platform dari URL
   const map = {
     'tiktok.com': 'tiktok', 'vm.tiktok.com': 'tiktok', 'vt.tiktok.com': 'tiktok',
     'instagram.com': 'instagram',
@@ -102,7 +104,6 @@ async function fetchDownload() {
       signal: controller.signal
     });
     clearTimeout(timeoutId);
-
     const data = await res.json();
 
     if (!data.status) {
@@ -125,13 +126,11 @@ async function fetchDownload() {
   }
 }
 
-// Simpan state untuk re-fetch saat download
-let _lastSourceUrl = '';
-let _lastEndpoint  = '';
-
 function renderResult(data, platformLabel, sourceUrl, endpoint) {
   _lastSourceUrl = sourceUrl || '';
   _lastEndpoint  = endpoint  || '';
+
+  // Thumbnail
   const thumbWrap = document.getElementById('thumbWrap');
   const thumb = data.thumbnail || data.thumb || data.cover
     || data.data?.thumbnail || data.data?.thumb || data.data?.cover
@@ -150,6 +149,7 @@ function renderResult(data, platformLabel, sourceUrl, endpoint) {
       </div>`;
   }
 
+  // Title & author
   const title = data.title || data.data?.title || data.caption || data.data?.caption
     || data.result?.metadata?.caption || 'Video';
   let author = data.author || data.data?.author || data.uploader || data.data?.uploader
@@ -157,13 +157,13 @@ function renderResult(data, platformLabel, sourceUrl, endpoint) {
   if (typeof author === 'object' && author !== null) {
     author = author.nickname || author.username || author.name || '';
   }
-  document.getElementById('resultTitle').textContent  = title;
-  document.getElementById('resultAuthor').textContent = author ? `@${String(author).replace(/^@/, '')}` : platformLabel;
-  document.getElementById('resultPlatform').textContent = platformLabel;
+  document.getElementById('resultTitle').textContent     = title;
+  document.getElementById('resultAuthor').textContent    = author ? `@${String(author).replace(/^@/, '')}` : platformLabel;
+  document.getElementById('resultPlatform').textContent  = platformLabel;
 
   const items = collectDownloadItems(data);
 
-  // Cari URL video yang bisa diputar (streamable preview URL tanpa header attachment)
+  // Video preview
   const d = data.data || data;
   let previewVideoUrl = '';
   if (Array.isArray(d.downloads) && d.downloads[0]?.sourceUrl) {
@@ -173,8 +173,8 @@ function renderResult(data, platformLabel, sourceUrl, endpoint) {
     previewVideoUrl = d.play || d.video || d.videoUrl || d.video_url || d.media?.videos?.[0]?.url || '';
   }
   if (!previewVideoUrl) {
-    const fallbackItem = items.find(i => typeof i.url === 'string' && !i.url.includes('jagoanproject.com/api/dl-') && (i.url.includes('.mp4') || i.label.toLowerCase().includes('video')));
-    if (fallbackItem) previewVideoUrl = fallbackItem.url;
+    const fi = items.find(i => typeof i.url === 'string' && (i.url.includes('.mp4') || i.label.toLowerCase().includes('video')));
+    if (fi) previewVideoUrl = fi.url;
   }
 
   const videoWrap = document.getElementById('videoWrap');
@@ -183,16 +183,15 @@ function renderResult(data, platformLabel, sourceUrl, endpoint) {
     videoWrap.innerHTML = `
       <video class="video-preview" controls playsinline preload="metadata" referrerpolicy="no-referrer">
         <source src="${esc(previewVideoUrl)}" type="video/mp4">
-        Browser Anda tidak mendukung pemutar video ini.
       </video>`;
   } else {
     videoWrap.style.display = 'none';
     videoWrap.innerHTML = '';
   }
 
+  // Download list
   const list = document.getElementById('downloadList');
   list.innerHTML = '';
-
   if (items.length === 0) {
     list.innerHTML = `<p style="color:var(--ink2);font-size:0.875rem;text-align:center;padding:20px 0">Tidak ada tautan unduhan yang ditemukan.</p>`;
   } else {
@@ -213,25 +212,23 @@ function collectDownloadItems(data) {
     }
   };
 
-  // YouTube: data.files[]
+  // YouTube
   if (Array.isArray(d.files)) {
     d.files.forEach((f, i) => {
       push(f.quality || `Video ${i+1}`, f.contentType?.includes('audio') ? 'MP3' : 'MP4', f.filename || '', f.url, i === 0);
     });
   }
 
-  // TikTok: data.downloads[]
+  // TikTok
   if (Array.isArray(d.downloads)) {
     const dl = d.downloads[0];
     if (dl) {
       const primaryUrl = dl.url || dl.sourceUrl;
-      if (primaryUrl) {
-        push('Video HD', 'Tanpa watermark', 'Kualitas terbaik tanpa watermark', primaryUrl, true);
-      }
+      if (primaryUrl) push('Video HD', 'Tanpa watermark', 'Kualitas terbaik tanpa watermark', primaryUrl, true);
     }
   }
 
-  // Instagram: result.media.videos[]
+  // Instagram
   const media = d.media || d.result?.media;
   if (media && Array.isArray(media.videos)) {
     media.videos.forEach((v, i) => {
@@ -244,8 +241,8 @@ function collectDownloadItems(data) {
     push('Video', 'MP4', 'Kualitas asli', meta.videoUrl || meta.video_url, true);
   }
 
-  push('Video HD',      'HD',     'Kualitas terbaik',  d.video_hd || d.videoHd || d.hd, items.length === 0);
-  push('Video standar', 'MP4',    'Kualitas standar',  d.video || d.video_url || d.videoUrl || d.download || d.url, items.length === 0);
+  push('Video HD',      'HD',     'Kualitas terbaik',   d.video_hd || d.videoHd || d.hd, items.length === 0);
+  push('Video standar', 'MP4',    'Kualitas standar',   d.video || d.video_url || d.videoUrl || d.download || d.url, items.length === 0);
   push('Video SD',      'SD',     'Ukuran lebih hemat', d.video_sd || d.videoSd || d.sd, false);
   push('Audio',         'MP3',    'Hanya suara',        d.audio || d.audio_url || d.musicUrl || d.mp3, false);
   push('Foto',          'Gambar', 'Kualitas asli',      d.image || d.photo || d.img, false);
@@ -266,7 +263,7 @@ function collectDownloadItems(data) {
     });
   }
 
-  // Fallback: scan string values
+  // Fallback
   if (items.length === 0) {
     Object.entries(d).forEach(([k, v]) => {
       if (typeof v === 'string' && v.startsWith('http') &&
@@ -306,7 +303,7 @@ function createDownloadItem({ label, badge, desc, url, isPrimary }) {
       </div>
       ${desc ? `<div class="dl-desc">${esc(desc)}</div>` : ''}
     </div>
-    <button class="btn-dl primary-btn" onclick="startDownload(event, '${esc(url)}', '${esc(label)}')">
+    <button class="btn-dl ${isPrimary ? 'primary-btn' : ''}" onclick="startDownload(event, '${esc(url)}', '${esc(label)}')">
       ${dlSvg}
       Unduh
     </button>
@@ -347,36 +344,31 @@ async function startDownload(e, url, label) {
   const videoTitle = document.getElementById('resultTitle')?.textContent || '';
   const baseTitle = videoTitle && videoTitle !== '—' ? videoTitle : (label || 'video');
   const safeName = baseTitle.replace(/[/\\?%*:|"<>]/g, '_').trim().slice(0, 50) || 'Droply';
-  const filename = `${safeName}_${Date.now()}.${fileExt}`;
+  const filename = `${safeName}.${fileExt}`;
 
-  // Untuk YouTube (savetube/googlevideo) — re-fetch URL baru supaya tidak expired
+  // Re-fetch URL baru untuk YouTube supaya tidak expired
   let finalUrl = url;
-  if (_lastSourceUrl && _lastEndpoint && (url.includes('savetube') || url.includes('googlevideo') || url.includes('ytimg'))) {
+  if (_lastSourceUrl && _lastEndpoint && (url.includes('savetube') || url.includes('googlevideo'))) {
     try {
-      showNotice('Menyiapkan link unduhan...', 'info');
+      showNotice('Menyiapkan unduhan...', 'info');
       const res = await fetch(`${BASE}/${_lastEndpoint}?url=${encodeURIComponent(_lastSourceUrl)}`);
       const data = await res.json();
       if (data.status && data.data?.files?.[0]?.url) {
         finalUrl = data.data.files[0].url;
       }
       hideNotice();
-    } catch(e) {
+    } catch(err) {
       hideNotice();
     }
   }
 
-  const videoTitle = document.getElementById('resultTitle')?.textContent || '';
-  const baseTitle = videoTitle && videoTitle !== '—' ? videoTitle : (label || 'video');
-  const safeName = baseTitle.replace(/[/\\?%*:|"<>]/g, '_').trim().slice(0, 50) || 'Droply';
-  const filename = `${safeName}_${Date.now()}.${fileExt}`;
-
-  // Langsung buka URL di tab baru — paling reliable di semua device
+  // Buka URL langsung di tab baru — browser akan auto-download video
   window.open(finalUrl, '_blank');
+}
 
-// Fallback jika masih dipanggil
 const forceDownload = (url, label) => startDownload(null, url, label);
 
-// Mobile navigation toggle
+// Mobile nav toggle
 const navToggle = document.getElementById('navToggle');
 const navLinks  = document.getElementById('navLinks');
 if (navToggle && navLinks) {
@@ -394,11 +386,9 @@ if (navToggle && navLinks) {
   };
 
   navToggle.addEventListener('click', () => toggleMenu());
-
   document.querySelectorAll('.nav-links a').forEach(link => {
     link.addEventListener('click', () => toggleMenu(false));
   });
-
   document.addEventListener('click', e => {
     if (!navToggle.contains(e.target) && !navLinks.contains(e.target)) {
       toggleMenu(false);
