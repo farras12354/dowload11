@@ -219,11 +219,11 @@ function collectDownloadItems(data) {
     });
   }
 
-  // TikTok
+  // TikTok — hanya pakai dl.url (signed download), jangan sourceUrl (CDN streaming)
   if (Array.isArray(d.downloads)) {
     const dl = d.downloads[0];
     if (dl) {
-      const primaryUrl = dl.url || dl.sourceUrl;
+      const primaryUrl = dl.url;
       if (primaryUrl) push('Video HD', 'Tanpa watermark', 'Kualitas terbaik tanpa watermark', primaryUrl, true);
     }
   }
@@ -341,52 +341,26 @@ async function startDownload(e, url, label) {
   const isAudio = ['mp3', 'aac', 'ogg', 'm4a'].includes(ext) || lower.includes('audio') || lower.includes('musik');
   const fileExt = isAudio ? 'mp3' : 'mp4';
 
+  // Selalu route lewat proxy /api/download supaya tidak pindah halaman
   const videoTitle = document.getElementById('resultTitle')?.textContent || '';
   const baseTitle = videoTitle && videoTitle !== '—' ? videoTitle : (label || 'video');
   const safeName = baseTitle.replace(/[/\\?%*:|"<>]/g, '_').trim().slice(0, 50) || 'Droply';
   const filename = `${safeName}.${fileExt}`;
 
-  // Re-fetch URL baru untuk YouTube supaya tidak expired
-  let finalUrl = url;
-  if (_lastSourceUrl && _lastEndpoint && (url.includes('savetube') || url.includes('googlevideo'))) {
-    try {
-      showNotice('Menyiapkan unduhan...', 'info');
-      const res = await fetch(`${BASE}/${_lastEndpoint}?url=${encodeURIComponent(_lastSourceUrl)}`);
-      const data = await res.json();
-      if (data.status && data.data?.files?.[0]?.url) {
-        finalUrl = data.data.files[0].url;
-      }
-      hideNotice();
-    } catch(err) {
-      hideNotice();
-    }
-  }
+  const proxyUrl = `/api/download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(filename)}`;
 
-  // Download via fetch + blob — tidak pindah halaman, tidak butuh PHP
-  try {
-    showNotice('Mengunduh... harap tunggu', 'info');
-    const response = await fetch(finalUrl, {
-      headers: { 'Accept': '*/*' }
-    });
-    if (!response.ok) throw new Error('Fetch gagal');
-    const blob = await response.blob();
-    const blobUrl = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = blobUrl;
-    a.download = filename;
-    a.style.display = 'none';
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => {
-      URL.revokeObjectURL(blobUrl);
-      document.body.removeChild(a);
-    }, 3000);
+  // Trigger download via hidden <a> ke proxy kita — tidak pindah halaman
+  showNotice('Mengunduh... harap tunggu', 'info');
+  const a = document.createElement('a');
+  a.href = proxyUrl;
+  a.download = filename;
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    document.body.removeChild(a);
     hideNotice();
-  } catch(err) {
-    hideNotice();
-    // Fallback: buka di tab baru
-    window.open(finalUrl, '_blank');
-  }
+  }, 3000);
 }
 
 const forceDownload = (url, label) => startDownload(null, url, label);
