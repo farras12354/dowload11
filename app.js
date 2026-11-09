@@ -306,10 +306,10 @@ function createDownloadItem({ label, badge, desc, url, isPrimary }) {
       </div>
       ${desc ? `<div class="dl-desc">${esc(desc)}</div>` : ''}
     </div>
-    <a class="btn-dl primary-btn" href="${esc(url)}" download="${esc(label)}.${isAudio ? 'mp3' : 'mp4'}" onclick="startDownload(event, '${esc(url)}', '${esc(label)}')">
+    <button class="btn-dl primary-btn" onclick="startDownload(event, '${esc(url)}', '${esc(label)}')">
       ${dlSvg}
       Unduh
-    </a>
+    </button>
   `;
   return el;
 }
