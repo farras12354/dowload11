@@ -362,8 +362,15 @@ async function startDownload(e, url, label) {
     }
   }
 
-  // Buka URL langsung di tab baru — browser akan auto-download video
-  window.open(finalUrl, '_blank');
+  // Lewat PHP proxy supaya download tidak pindah halaman
+  const proxyUrl = `/dl.php?url=${encodeURIComponent(finalUrl)}&filename=${encodeURIComponent(filename)}`;
+  const a = document.createElement('a');
+  a.href = proxyUrl;
+  a.setAttribute('download', filename);
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { try { document.body.removeChild(a); } catch(err) {} }, 2000);
 }
 
 const forceDownload = (url, label) => startDownload(null, url, label);
