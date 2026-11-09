@@ -384,18 +384,6 @@ async function startDownload(e, url, label) {
   }, 1000);
 }
 
-  // Trigger download tanpa pindah halaman dan bisa berulang kali
-  const a = document.createElement('a');
-  a.href = targetDownloadUrl;
-  a.setAttribute('download', filename);
-  a.style.display = 'none';
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(() => {
-    try { document.body.removeChild(a); } catch (err) {}
-  }, 1000);
-}
-
 // Fallback jika masih dipanggil
 const forceDownload = (url, label) => startDownload(null, url, label);
 
