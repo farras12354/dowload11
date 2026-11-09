@@ -362,9 +362,31 @@ async function startDownload(e, url, label) {
     }
   }
 
-  // Lewat PHP proxy — set window.location supaya download tanpa pindah halaman
-  const proxyUrl = `/dl.php?url=${encodeURIComponent(finalUrl)}&filename=${encodeURIComponent(filename)}`;
-  window.location.href = proxyUrl;
+  // Download via fetch + blob — tidak pindah halaman, tidak butuh PHP
+  try {
+    showNotice('Mengunduh... harap tunggu', 'info');
+    const response = await fetch(finalUrl, {
+      headers: { 'Accept': '*/*' }
+    });
+    if (!response.ok) throw new Error('Fetch gagal');
+    const blob = await response.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = filename;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      URL.revokeObjectURL(blobUrl);
+      document.body.removeChild(a);
+    }, 3000);
+    hideNotice();
+  } catch(err) {
+    hideNotice();
+    // Fallback: buka di tab baru
+    window.open(finalUrl, '_blank');
+  }
 }
 
 const forceDownload = (url, label) => startDownload(null, url, label);
