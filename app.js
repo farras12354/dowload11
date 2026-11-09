@@ -110,7 +110,7 @@ async function fetchDownload() {
       return;
     }
 
-    renderResult(data, label);
+    renderResult(data, label, inputVal, endpoint);
 
   } catch (err) {
     clearTimeout(timeoutId);
@@ -125,7 +125,13 @@ async function fetchDownload() {
   }
 }
 
-function renderResult(data, platformLabel) {
+// Simpan state untuk re-fetch saat download
+let _lastSourceUrl = '';
+let _lastEndpoint  = '';
+
+function renderResult(data, platformLabel, sourceUrl, endpoint) {
+  _lastSourceUrl = sourceUrl || '';
+  _lastEndpoint  = endpoint  || '';
   const thumbWrap = document.getElementById('thumbWrap');
   const thumb = data.thumbnail || data.thumb || data.cover
     || data.data?.thumbnail || data.data?.thumb || data.data?.cover
@@ -329,7 +335,7 @@ function showNotice(msg, type = 'info') {
 function hideNotice() { document.getElementById('notice').style.display = 'none'; }
 function hideResult()  { document.getElementById('result').style.display  = 'none'; }
 
-function startDownload(e, url, label) {
+async function startDownload(e, url, label) {
   if (e && e.preventDefault) e.preventDefault();
 
   const cleanUrl = url.split('?')[0];
@@ -343,8 +349,40 @@ function startDownload(e, url, label) {
   const safeName = baseTitle.replace(/[/\\?%*:|"<>]/g, '_').trim().slice(0, 50) || 'Droply';
   const filename = `${safeName}_${Date.now()}.${fileExt}`;
 
-  // Semua URL lewat proxy /api/download supaya tidak pindah halaman
-  const targetDownloadUrl = `/api/download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(filename)}`;
+  // Untuk YouTube (savetube/googlevideo) — re-fetch URL baru supaya tidak expired
+  let finalUrl = url;
+  if (_lastSourceUrl && _lastEndpoint && (url.includes('savetube') || url.includes('googlevideo') || url.includes('ytimg'))) {
+    try {
+      showNotice('Menyiapkan link unduhan...', 'info');
+      const res = await fetch(`${BASE}/${_lastEndpoint}?url=${encodeURIComponent(_lastSourceUrl)}`);
+      const data = await res.json();
+      if (data.status && data.data?.files?.[0]?.url) {
+        finalUrl = data.data.files[0].url;
+      }
+      hideNotice();
+    } catch(e) {
+      hideNotice();
+      // Pakai URL lama kalau gagal
+    }
+  }
+
+  // Lewat PHP proxy
+  const directDomains = ['cdninstagram.com', 'fbcdn.net', 'twimg.com'];
+  const isDirect = directDomains.some(d => finalUrl.includes(d));
+  const targetDownloadUrl = isDirect
+    ? finalUrl
+    : `/dl.php?url=${encodeURIComponent(finalUrl)}&filename=${encodeURIComponent(filename)}`;
+
+  const a = document.createElement('a');
+  a.href = targetDownloadUrl;
+  a.setAttribute('download', filename);
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    try { document.body.removeChild(a); } catch (err) {}
+  }, 1000);
+}
 
   // Trigger download tanpa pindah halaman dan bisa berulang kali
   const a = document.createElement('a');
