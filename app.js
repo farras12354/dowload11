@@ -362,27 +362,16 @@ async function startDownload(e, url, label) {
       hideNotice();
     } catch(e) {
       hideNotice();
-      // Pakai URL lama kalau gagal
     }
   }
 
-  // Lewat PHP proxy
-  const directDomains = ['cdninstagram.com', 'fbcdn.net', 'twimg.com'];
-  const isDirect = directDomains.some(d => finalUrl.includes(d));
-  const targetDownloadUrl = isDirect
-    ? finalUrl
-    : `/dl.php?url=${encodeURIComponent(finalUrl)}&filename=${encodeURIComponent(filename)}`;
+  const videoTitle = document.getElementById('resultTitle')?.textContent || '';
+  const baseTitle = videoTitle && videoTitle !== '—' ? videoTitle : (label || 'video');
+  const safeName = baseTitle.replace(/[/\\?%*:|"<>]/g, '_').trim().slice(0, 50) || 'Droply';
+  const filename = `${safeName}_${Date.now()}.${fileExt}`;
 
-  const a = document.createElement('a');
-  a.href = targetDownloadUrl;
-  a.setAttribute('download', filename);
-  a.style.display = 'none';
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(() => {
-    try { document.body.removeChild(a); } catch (err) {}
-  }, 1000);
-}
+  // Langsung buka URL di tab baru — paling reliable di semua device
+  window.open(finalUrl, '_blank');
 
 // Fallback jika masih dipanggil
 const forceDownload = (url, label) => startDownload(null, url, label);
