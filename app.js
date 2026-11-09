@@ -362,15 +362,9 @@ async function startDownload(e, url, label) {
     }
   }
 
-  // Lewat PHP proxy supaya download tidak pindah halaman
+  // Lewat PHP proxy — set window.location supaya download tanpa pindah halaman
   const proxyUrl = `/dl.php?url=${encodeURIComponent(finalUrl)}&filename=${encodeURIComponent(filename)}`;
-  const a = document.createElement('a');
-  a.href = proxyUrl;
-  a.setAttribute('download', filename);
-  a.style.display = 'none';
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(() => { try { document.body.removeChild(a); } catch(err) {} }, 2000);
+  window.location.href = proxyUrl;
 }
 
 const forceDownload = (url, label) => startDownload(null, url, label);
