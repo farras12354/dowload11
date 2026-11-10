@@ -4,393 +4,716 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="referrer" content="no-referrer" />
-  <title>Droply — Unduh Video Media Sosial</title>
+  <title>Droply — Unduh Video Media Sosial Cepat & Modern</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --navy:     #0a2342;
-      --navy2:    #12315d;
-      --navy3:    #1c4580;
-      --accent:   #2563eb;
-      --accent-d: #1d4fc4;
-      --accent-bg:#eaf1ff;
-      --bg:       #f2f5fa;
-      --surface:  #ffffff;
-      --ink:      #0f1b2d;
-      --ink2:     #475569;
-      --ink3:     #7a879a;
-      --line:     #dde3ec;
-      --line2:    #c6cfdd;
-      --danger:   #b42318;
-      --danger-bg:#fef3f2;
-      --danger-ln:#fecdca;
-      --radius:   10px;
-      --shadow:   0 1px 2px rgba(10,35,66,.06), 0 8px 24px rgba(10,35,66,.08);
+      --navy:       #060f1e;
+      --navy2:      #0c1a30;
+      --navy3:      #132847;
+      --accent:     #2563eb;
+      --accent-glow:#3b82f6;
+      --accent-d:   #1d4ed8;
+      --accent-bg:  #eff6ff;
+      --cyan:       #06b6d4;
+      --purple:     #8b5cf6;
+      --bg:         #f4f7fc;
+      --surface:    #ffffff;
+      --ink:        #0a1120;
+      --ink2:       #475569;
+      --ink3:       #8190a6;
+      --line:       #e2e8f0;
+      --line2:      #cbd5e1;
+      --danger:     #dc2626;
+      --danger-bg:  #fef2f2;
+      --danger-ln:  #fecaca;
+      --radius:     16px;
+      --radius-sm:  10px;
+      /* 3D Shadows */
+      --shadow-3d:      0 20px 45px -10px rgba(15, 23, 42, 0.12), 0 0 0 1px rgba(226, 232, 240, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+      --shadow-3d-deep: 0 30px 60px -15px rgba(15, 23, 42, 0.16), 0 12px 24px -6px rgba(37, 99, 235, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+      --shadow-card:    0 4px 6px -1px rgba(15, 23, 42, 0.05), 0 10px 20px -3px rgba(15, 23, 42, 0.04), 0 0 0 1px rgba(226, 232, 240, 0.7);
+      --shadow-card-hover: 0 20px 35px -10px rgba(15, 23, 42, 0.1), 0 8px 16px -4px rgba(37, 99, 235, 0.08), 0 0 0 1px rgba(148, 163, 184, 0.4);
     }
 
     html { scroll-behavior: smooth; }
 
     body {
-      font-family: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
       background: var(--bg);
       color: var(--ink);
       line-height: 1.55;
       -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
     }
 
     :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-    .container { width: 100%; max-width: 1000px; margin: 0 auto; padding: 0 24px; }
+    .container { width: 100%; max-width: 1060px; margin: 0 auto; padding: 0 24px; }
 
-    /* ── Navbar ── */
+    /* ── 3D Glass Navbar ── */
     .nav {
       position: sticky;
       top: 0;
       z-index: 100;
-      background: var(--navy);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border-bottom: 1px solid rgba(255,255,255,.08);
-      transition: background 0.2s;
+      background: rgba(6, 15, 30, 0.82);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+      transition: background 0.25s ease;
     }
     .nav-inner {
-      height: 64px;
+      height: 68px;
       display: flex; align-items: center; justify-content: space-between;
       position: relative;
     }
-    .logo { display: flex; align-items: center; gap: 10px; color: #fff; text-decoration: none; }
-    .logo-icon {
-      width: 32px; height: 32px; border-radius: 7px;
-      background: var(--accent);
-      display: grid; place-items: center;
-      box-shadow: 0 2px 8px rgba(37,99,235,0.35);
+    .logo {
+      display: flex; align-items: center; gap: 11px;
+      color: #fff; text-decoration: none;
+      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     }
-    .logo-icon svg { width: 17px; height: 17px; }
-    .logo-name { font-size: 1.15rem; font-weight: 700; letter-spacing: -0.01em; }
-    
+    .logo:hover { transform: translateY(-1px) scale(1.02); }
+    .logo-icon {
+      width: 38px; height: 38px; border-radius: 10px;
+      background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+      display: grid; place-items: center;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    .logo-icon svg { width: 19px; height: 19px; }
+    .logo-name {
+      font-size: 1.25rem; font-weight: 800; letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #ffffff 0%, #dbeafe 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
     .nav-links {
       display: flex;
       align-items: center;
-      gap: 28px;
+      gap: 12px;
     }
     .nav-links a {
-      color: #b9c6dc;
+      color: #94a3b8;
       text-decoration: none;
       font-size: 0.875rem;
-      font-weight: 500;
-      padding: 6px 10px;
-      border-radius: 6px;
-      transition: color .15s, background .15s;
+      font-weight: 600;
+      padding: 8px 14px;
+      border-radius: 10px;
+      transition: all .2s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
     }
     .nav-links a:hover {
       color: #fff;
-      background: rgba(255,255,255,0.06);
+      background: rgba(255, 255, 255, 0.08);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      transform: translateY(-1px);
+    }
+    .nav-links a.active {
+      color: #fff;
+      background: rgba(37, 99, 235, 0.25);
+      border: 1px solid rgba(59, 130, 246, 0.4);
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2);
     }
 
     .nav-toggle {
       display: none;
-      background: transparent;
-      border: 1px solid rgba(255,255,255,0.15);
-      border-radius: 8px;
-      width: 38px; height: 38px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 10px;
+      width: 40px; height: 40px;
       color: #fff;
       cursor: pointer;
       align-items: center;
       justify-content: center;
-      transition: all .15s;
+      transition: all .2s;
     }
     .nav-toggle:hover {
-      background: rgba(255,255,255,0.08);
-      border-color: rgba(255,255,255,0.25);
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.3);
     }
     .nav-toggle svg { width: 20px; height: 20px; }
 
-    .block {
-      scroll-margin-top: 84px;
+    /* ── 3D Atmospheric Hero ── */
+    .hero {
+      position: relative;
+      background: radial-gradient(circle at 50% 10%, #172a4d 0%, #0a172e 45%, #050b16 100%);
+      color: #fff;
+      padding: 72px 0 148px;
+      overflow: hidden;
     }
 
-    /* ── Hero ── */
-    .hero {
-      background:
-        linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px) 0 0 / 100% 44px,
-        linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px) 0 0 / 44px 100%,
-        var(--navy);
-      color: #fff;
-      padding: 64px 0 132px;
+    /* 3D Floating Glowing Spheres / Orbs */
+    .hero-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      pointer-events: none;
+      opacity: 0.55;
+      animation: orbFloat 9s ease-in-out infinite alternate;
     }
+    .orb-1 { width: 380px; height: 380px; background: #2563eb; top: -100px; left: 8%; }
+    .orb-2 { width: 340px; height: 340px; background: #7c3aed; top: 20px; right: 10%; animation-delay: -3s; }
+    .orb-3 { width: 280px; height: 280px; background: #06b6d4; bottom: 30px; left: 45%; animation-delay: -5s; opacity: 0.35; }
+
+    @keyframes orbFloat {
+      0%   { transform: translate(0, 0) scale(1); }
+      50%  { transform: translate(30px, 20px) scale(1.08); }
+      100% { transform: translate(-20px, -15px) scale(0.96); }
+    }
+
+    /* Subtle 3D Perspective Grid Background */
+    .hero-grid {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
+      background-size: 40px 40px;
+      mask-image: radial-gradient(ellipse at 50% 30%, rgba(0,0,0,0.85) 0%, transparent 75%);
+      -webkit-mask-image: radial-gradient(ellipse at 50% 30%, rgba(0,0,0,0.85) 0%, transparent 75%);
+      pointer-events: none;
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 2;
+    }
+
+    /* 3D Glass Pill Badge */
+    .hero-badge-3d {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      padding: 6px 16px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #93c5fd;
+      margin-bottom: 22px;
+      animation: floatBadge 4s ease-in-out infinite;
+    }
+    @keyframes floatBadge {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-4px); }
+    }
+    .badge-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 10px #10b981;
+      animation: pulseDot 2s infinite;
+    }
+    @keyframes pulseDot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.3); }
+    }
+
     .hero h1 {
-      font-size: 2.6rem; line-height: 1.15;
-      font-weight: 700; letter-spacing: -0.025em;
-      max-width: 640px; margin-bottom: 16px;
+      font-size: 2.85rem; line-height: 1.15;
+      font-weight: 800; letter-spacing: -0.03em;
+      max-width: 680px; margin-bottom: 18px;
+      background: linear-gradient(135deg, #ffffff 40%, #bfdbfe 80%, #93c5fd 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 15px 30px rgba(0, 0, 0, 0.35);
     }
-    .hero p { color: #b9c6dc; font-size: 1.05rem; max-width: 540px; margin-bottom: 28px; }
-    .hero-points { display: flex; flex-wrap: wrap; gap: 10px 28px; list-style: none; }
+    .hero p {
+      color: #94a3b8; font-size: 1.08rem; max-width: 580px; margin-bottom: 30px;
+      line-height: 1.6;
+    }
+    .hero-points {
+      display: flex; flex-wrap: wrap; gap: 12px 20px; list-style: none;
+    }
     .hero-points li {
       display: flex; align-items: center; gap: 8px;
-      font-size: 0.875rem; font-weight: 500; color: #dbe5f5;
+      font-size: 0.84rem; font-weight: 600; color: #e2e8f0;
+      background: rgba(255, 255, 255, 0.05);
+      padding: 6px 14px; border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(8px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      transition: all 0.2s;
     }
-    .hero-points svg { width: 16px; height: 16px; color: #6ea8ff; flex-shrink: 0; }
+    .hero-points li:hover {
+      background: rgba(255, 255, 255, 0.1);
+      transform: translateY(-2px);
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+    .hero-points svg { width: 16px; height: 16px; color: #38bdf8; flex-shrink: 0; }
 
-    /* ── Downloader card ── */
+    /* ── 3D Downloader Card ── */
+    .tool-wrapper {
+      perspective: 1200px;
+      margin-top: -88px;
+      position: relative;
+      z-index: 10;
+    }
+
     .tool {
-      margin-top: -76px; position: relative; z-index: 2;
-      background: var(--surface);
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      box-shadow: var(--shadow);
-      padding: 28px;
+      background: linear-gradient(180deg, #ffffff 0%, #fcfdfe 70%, #f8fafc 100%);
+      border: 1px solid rgba(255, 255, 255, 0.9);
+      border-radius: 24px;
+      box-shadow: var(--shadow-3d-deep);
+      padding: 32px;
+      position: relative;
+      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease;
+      transform-style: preserve-3d;
     }
-    .tool-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
-    .tool-title { font-size: 1rem; font-weight: 600; }
-    .tool-sub { font-size: 0.8rem; color: var(--ink3); }
+    .tool::before {
+      content: "";
+      position: absolute;
+      inset: -1px;
+      border-radius: 25px;
+      padding: 1px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 1) 0%, rgba(203, 213, 225, 0.6) 100%);
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      pointer-events: none;
+    }
 
-    .platforms { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+    .tool-head {
+      display: flex; align-items: baseline; justify-content: space-between;
+      gap: 12px; margin-bottom: 18px;
+    }
+    .tool-title {
+      font-size: 1.15rem; font-weight: 700; letter-spacing: -0.015em;
+      color: var(--ink);
+    }
+    .tool-sub {
+      font-size: 0.82rem; color: var(--ink3); font-weight: 500;
+    }
+
+    /* 3D Platform Selector Pills */
+    .platforms {
+      display: flex; flex-wrap: wrap; gap: 9px; margin-bottom: 22px;
+    }
     .platform-btn {
-      background: var(--surface);
+      background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
       border: 1px solid var(--line2);
-      border-radius: 8px;
-      padding: 8px 14px;
-      font-family: inherit; font-size: 0.84rem; font-weight: 500;
+      border-radius: 12px;
+      padding: 10px 18px;
+      font-family: inherit; font-size: 0.85rem; font-weight: 600;
       color: var(--ink2); cursor: pointer;
-      transition: background .15s, border-color .15s, color .15s;
+      box-shadow: 0 3px 0 #cbd5e1, 0 4px 8px rgba(15, 23, 42, 0.05);
+      transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
     }
-    .platform-btn:hover { border-color: var(--navy3); color: var(--ink); }
-    .platform-btn.active { background: var(--navy); border-color: var(--navy); color: #fff; }
+    .platform-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 0 #cbd5e1, 0 8px 16px rgba(15, 23, 42, 0.08);
+      color: var(--ink);
+      border-color: #94a3b8;
+    }
+    .platform-btn:active {
+      transform: translateY(2px);
+      box-shadow: 0 1px 0 #cbd5e1, 0 2px 4px rgba(15, 23, 42, 0.05);
+    }
+    .platform-btn.active {
+      background: linear-gradient(180deg, #1e3a8a 0%, #0f172a 100%);
+      border-color: #0f172a;
+      color: #fff;
+      box-shadow: 0 3px 0 #020617, 0 8px 20px rgba(15, 23, 42, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+      transform: translateY(1px);
+    }
 
-    .input-wrap { display: flex; gap: 10px; }
-    .url-field { position: relative; flex: 1; min-width: 0; }
+    /* 3D Input & Action Row */
+    .input-wrap {
+      display: flex; gap: 12px; position: relative;
+    }
+    .url-field {
+      position: relative; flex: 1; min-width: 0;
+    }
     .url-field svg {
-      position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
-      width: 17px; height: 17px; color: var(--ink3); pointer-events: none;
+      position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
+      width: 19px; height: 19px; color: var(--ink3); pointer-events: none;
+      transition: color 0.2s;
     }
     .url-input {
       width: 100%;
       background: #f8fafc;
       border: 1px solid var(--line2);
-      border-radius: 9px;
-      padding: 14px 14px 14px 42px;
+      border-radius: 14px;
+      padding: 16px 16px 16px 46px;
       color: var(--ink);
-      font-family: inherit; font-size: 0.95rem;
+      font-family: inherit; font-size: 0.98rem; font-weight: 500;
       outline: none;
-      transition: border-color .15s, box-shadow .15s, background .15s;
+      box-shadow: inset 0 2px 4px rgba(15, 23, 42, 0.04), 0 1px 0 #ffffff;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     }
-    .url-input::placeholder { color: var(--ink3); }
-    .url-input:focus { background: #fff; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,.15); }
+    .url-input::placeholder { color: var(--ink3); font-weight: 400; }
+    .url-input:focus {
+      background: #fff;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.16), inset 0 1px 2px rgba(15, 23, 42, 0.02);
+    }
+    .url-field:focus-within svg { color: var(--accent); }
 
+    /* 3D Tactile Download Button */
     .btn-download {
-      padding: 0 28px;
-      background: var(--accent);
-      border: 1px solid var(--accent);
-      border-radius: 9px;
+      padding: 0 32px;
+      background: linear-gradient(180deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%);
+      border: 1px solid #1d4ed8;
+      border-radius: 14px;
       color: #fff;
-      font-family: inherit; font-size: 0.95rem; font-weight: 600;
+      font-family: inherit; font-size: 1rem; font-weight: 700;
       cursor: pointer; white-space: nowrap;
-      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-      transition: background .15s;
+      display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 4px 0 #1e40af, 0 12px 24px rgba(37, 99, 235, 0.38);
+      transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
     }
-    .btn-download:hover { background: var(--accent-d); }
-    .btn-download:disabled { opacity: .6; cursor: not-allowed; }
-    .btn-download svg { width: 16px; height: 16px; }
-    .form-hint { margin-top: 12px; font-size: 0.78rem; color: var(--ink3); }
+    .btn-download:hover {
+      transform: translateY(-2px);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 6px 0 #1e40af, 0 16px 28px rgba(37, 99, 235, 0.45);
+    }
+    .btn-download:active {
+      transform: translateY(3px);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 1px 0 #1e40af, 0 4px 10px rgba(37, 99, 235, 0.25);
+    }
+    .btn-download:disabled {
+      opacity: .65; cursor: not-allowed;
+      transform: none; box-shadow: none;
+    }
+    .btn-download svg { width: 17px; height: 17px; }
+    .form-hint {
+      margin-top: 14px; font-size: 0.82rem; color: var(--ink3); font-weight: 500;
+      display: flex; align-items: center; gap: 6px;
+    }
 
     .spinner {
-      width: 15px; height: 15px;
+      width: 17px; height: 17px;
       border: 2px solid rgba(255,255,255,.4); border-top-color: #fff;
       border-radius: 50%; animation: spin .7s linear infinite; display: none;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
     .notice {
-      display: none; margin-top: 16px; padding: 12px 14px;
-      border-radius: 8px; font-size: 0.875rem; border: 1px solid;
+      display: none; margin-top: 18px; padding: 14px 18px;
+      border-radius: 12px; font-size: 0.9rem; font-weight: 600; border: 1px solid;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      animation: popIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     }
     .notice.error { background: var(--danger-bg); border-color: var(--danger-ln); color: var(--danger); }
-    .notice.info  { background: var(--accent-bg); border-color: #c5d8ff; color: var(--accent-d); }
+    .notice.info  { background: var(--accent-bg); border-color: #bfdbfe; color: var(--accent-d); }
 
-    /* ── Result ── */
+    /* ── 3D Result Card ── */
     #result {
-      display: none; margin-top: 20px;
-      background: var(--surface);
+      display: none; margin-top: 28px;
+      background: #ffffff;
       border: 1px solid var(--line);
-      border-radius: 14px;
-      box-shadow: var(--shadow);
+      border-radius: 22px;
+      box-shadow: var(--shadow-3d);
       overflow: hidden;
+      animation: popIn3D 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     }
+    @keyframes popIn3D {
+      0% { opacity: 0; transform: translateY(18px) scale(0.98); }
+      100% { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
     .result-header {
-      display: flex; align-items: center; gap: 14px;
-      padding: 18px 24px;
-      background: #f8fafc;
+      display: flex; align-items: center; gap: 16px;
+      padding: 20px 28px;
+      background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
       border-bottom: 1px solid var(--line);
     }
     .result-thumb, .result-thumb-placeholder {
-      width: 56px; height: 56px; border-radius: 8px; flex-shrink: 0;
-      border: 1px solid var(--line); background: #fff;
+      width: 64px; height: 64px; border-radius: 12px; flex-shrink: 0;
+      border: 2px solid #ffffff; background: #fff;
+      box-shadow: 0 6px 16px rgba(15, 23, 42, 0.12);
     }
     .result-thumb { object-fit: cover; }
     .result-thumb-placeholder { display: grid; place-items: center; }
     .result-meta { flex: 1; min-width: 0; }
     .result-title {
-      font-size: 0.95rem; font-weight: 600; margin-bottom: 4px;
+      font-size: 1.05rem; font-weight: 700; margin-bottom: 5px;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      color: var(--ink);
     }
-    .result-sub { display: flex; align-items: center; gap: 8px; }
-    .result-author { font-size: 0.8rem; color: var(--ink2); }
+    .result-sub { display: flex; align-items: center; gap: 10px; }
+    .result-author { font-size: 0.84rem; color: var(--ink2); font-weight: 500; }
     .platform-badge {
-      font-size: 0.72rem; font-weight: 500; padding: 2px 8px; border-radius: 4px;
-      background: var(--accent-bg); color: var(--accent-d); border: 1px solid #c5d8ff;
+      font-size: 0.74rem; font-weight: 700; padding: 3px 10px; border-radius: 6px;
+      background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+      color: var(--accent-d); border: 1px solid #bfdbfe;
+      box-shadow: 0 2px 4px rgba(37, 99, 235, 0.1);
     }
 
-    .video-preview-wrap { padding: 24px 24px 0; }
+    .video-preview-wrap { padding: 24px 28px 0; }
     .video-preview {
-      width: 100%; max-height: 360px; display: block;
-      border-radius: 8px; background: #000;
+      width: 100%; max-height: 380px; display: block;
+      border-radius: 12px; background: #000;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
     }
 
-    .download-list { padding: 8px 24px 12px; }
+    .download-list { padding: 16px 28px 20px; display: grid; gap: 12px; }
     .download-item {
-      display: flex; align-items: center; gap: 14px;
-      padding: 14px 0; border-bottom: 1px solid var(--line);
+      display: flex; align-items: center; gap: 16px;
+      padding: 16px 20px;
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      box-shadow: var(--shadow-card);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     }
-    .download-item:last-child { border-bottom: none; }
+    .download-item:hover {
+      transform: translateY(-3px) scale(1.005);
+      box-shadow: var(--shadow-card-hover);
+      border-color: #cbd5e1;
+    }
+    .download-item.is-primary {
+      background: linear-gradient(180deg, #ffffff 0%, #f0f7ff 100%);
+      border-color: #bfdbfe;
+      box-shadow: 0 6px 18px rgba(37, 99, 235, 0.08), 0 0 0 1px #bfdbfe;
+    }
+
     .dl-icon {
-      width: 36px; height: 36px; border-radius: 8px;
-      background: var(--bg); color: var(--ink2);
+      width: 42px; height: 42px; border-radius: 12px;
+      background: #f1f5f9; color: var(--ink2);
       display: grid; place-items: center; flex-shrink: 0;
+      box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.06);
     }
-    .download-item.is-primary .dl-icon { background: var(--accent-bg); color: var(--accent); }
-    .dl-icon svg { width: 17px; height: 17px; }
+    .download-item.is-primary .dl-icon {
+      background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+      color: var(--accent);
+      box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2);
+    }
+    .dl-icon svg { width: 19px; height: 19px; }
     .dl-info { flex: 1; min-width: 0; }
-    .dl-title-row { display: flex; align-items: center; gap: 8px; }
-    .dl-label { font-size: 0.9rem; font-weight: 600; }
+    .dl-title-row { display: flex; align-items: center; gap: 9px; }
+    .dl-label { font-size: 0.96rem; font-weight: 700; color: var(--ink); }
     .dl-badge {
-      font-size: 0.7rem; font-weight: 500; padding: 1px 7px; border-radius: 4px;
-      background: var(--bg); color: var(--ink2); border: 1px solid var(--line);
+      font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 6px;
+      background: #f1f5f9; color: var(--ink2); border: 1px solid var(--line);
     }
-    .download-item.is-primary .dl-badge { background: var(--accent-bg); color: var(--accent-d); border-color: #c5d8ff; }
-    .dl-desc { font-size: 0.78rem; color: var(--ink3); margin-top: 1px; }
+    .download-item.is-primary .dl-badge {
+      background: #dbeafe; color: var(--accent-d); border-color: #bfdbfe;
+    }
+    .dl-desc { font-size: 0.8rem; color: var(--ink3); margin-top: 2px; }
 
+    /* 3D Action Buttons on Items */
     .btn-dl {
-      padding: 9px 18px; border-radius: 8px;
-      font-family: inherit; font-size: 0.82rem; font-weight: 600;
+      padding: 10px 22px; border-radius: 12px;
+      font-family: inherit; font-size: 0.88rem; font-weight: 700;
       text-decoration: none; white-space: nowrap;
-      display: inline-flex; align-items: center; gap: 6px;
-      border: 1px solid var(--line2); background: var(--surface); color: var(--ink);
-      transition: background .15s, border-color .15s;
+      display: inline-flex; align-items: center; gap: 8px;
+      border: 1px solid var(--line2);
+      background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+      color: var(--ink);
+      box-shadow: 0 3px 0 #cbd5e1, 0 4px 8px rgba(15, 23, 42, 0.05);
+      cursor: pointer;
+      transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
     }
-    .btn-dl:hover { background: var(--bg); border-color: var(--ink3); }
-    .btn-dl.primary-btn { background: var(--navy); border-color: var(--navy); color: #fff; }
-    .btn-dl.primary-btn:hover { background: var(--navy2); border-color: var(--navy2); }
-    .btn-dl svg { width: 14px; height: 14px; }
+    .btn-dl:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 0 #cbd5e1, 0 8px 16px rgba(15, 23, 42, 0.08);
+      background: #fff;
+    }
+    .btn-dl:active {
+      transform: translateY(2px);
+      box-shadow: 0 1px 0 #cbd5e1, 0 2px 4px rgba(15, 23, 42, 0.05);
+    }
+    .btn-dl.primary-btn {
+      background: linear-gradient(180deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%);
+      border-color: #1d4ed8; color: #fff;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 3px 0 #1e40af, 0 8px 20px rgba(37, 99, 235, 0.35);
+    }
+    .btn-dl.primary-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 5px 0 #1e40af, 0 12px 24px rgba(37, 99, 235, 0.45);
+    }
+    .btn-dl.primary-btn:active {
+      transform: translateY(2px);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 1px 0 #1e40af, 0 4px 10px rgba(37, 99, 235, 0.25);
+    }
+    .btn-dl svg { width: 15px; height: 15px; }
 
-    /* ── Sections ── */
-    section.block { padding: 72px 0 0; scroll-margin-top: 16px; }
-    .block-head { max-width: 560px; margin-bottom: 32px; }
-    .block-head h2 { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.02em; line-height: 1.25; margin-bottom: 8px; }
-    .block-head p { color: var(--ink2); }
+    /* ── 3D Showcase Sections ── */
+    section.block-3d { padding: 88px 0 0; }
+    .section-header { text-align: center; max-width: 620px; margin: 0 auto 44px; }
+    .section-badge-3d {
+      display: inline-block;
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+      padding: 5px 14px; border-radius: 999px;
+      background: var(--accent-bg); color: var(--accent);
+      border: 1px solid #bfdbfe; margin-bottom: 12px;
+      box-shadow: 0 2px 8px rgba(37, 99, 235, 0.12);
+    }
+    .section-header h2 {
+      font-size: 2.1rem; font-weight: 800; letter-spacing: -0.025em; line-height: 1.25; margin-bottom: 12px;
+      color: var(--ink);
+    }
+    .section-header p { color: var(--ink2); font-size: 1rem; line-height: 1.6; }
 
-    .platform-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 16px; }
-    .platform-card {
-      background: var(--surface); border: 1px solid var(--line);
-      border-radius: var(--radius); padding: 20px;
+    /* 3D Feature Grid */
+    .features-grid-3d {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px;
     }
-    .platform-card h3 { font-size: 0.95rem; font-weight: 600; margin-bottom: 4px; }
-    .platform-card p { font-size: 0.82rem; color: var(--ink2); }
+    .feature-card-3d {
+      background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 30px;
+      box-shadow: var(--shadow-card);
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+    }
+    .feature-card-3d:hover {
+      transform: translateY(-6px);
+      box-shadow: var(--shadow-card-hover);
+      border-color: #cbd5e1;
+    }
+    .feature-icon-3d {
+      width: 54px; height: 54px; border-radius: 16px;
+      display: grid; place-items: center; margin-bottom: 20px;
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+    }
+    .icon-blue   { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: #fff; }
+    .icon-purple { background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); color: #fff; }
+    .icon-cyan   { background: linear-gradient(135deg, #06b6d4 0%, #0e7490 100%); color: #fff; }
+    .feature-icon-3d svg { width: 24px; height: 24px; }
+    .feature-card-3d h3 { font-size: 1.12rem; font-weight: 700; margin-bottom: 8px; color: var(--ink); }
+    .feature-card-3d p { font-size: 0.9rem; color: var(--ink2); line-height: 1.6; }
 
-    .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; list-style: none; }
-    .step {
-      background: var(--surface); border: 1px solid var(--line);
-      border-radius: var(--radius); padding: 24px;
+    /* 3D Platform Cards Showcase */
+    .platform-grid-3d {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 18px;
     }
-    .step-no {
-      width: 30px; height: 30px; border-radius: 50%;
-      background: var(--navy); color: #fff;
-      font-size: 0.85rem; font-weight: 600;
-      display: grid; place-items: center; margin-bottom: 14px;
+    .platform-showcase-card {
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 22px;
+      box-shadow: var(--shadow-card);
+      cursor: pointer;
+      text-decoration: none; color: inherit;
+      display: flex; flex-direction: column; justify-content: space-between;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative; overflow: hidden;
     }
-    .step h3 { font-size: 1rem; font-weight: 600; margin-bottom: 6px; }
-    .step p { font-size: 0.875rem; color: var(--ink2); }
+    .platform-showcase-card::after {
+      content: ""; position: absolute; inset: 0;
+      background: radial-gradient(circle at 100% 0%, var(--card-glow, rgba(37,99,235,0.08)) 0%, transparent 60%);
+      pointer-events: none; opacity: 0; transition: opacity 0.25s;
+    }
+    .platform-showcase-card:hover {
+      transform: translateY(-5px);
+      box-shadow: var(--shadow-card-hover);
+      border-color: var(--card-border, #cbd5e1);
+    }
+    .platform-showcase-card:hover::after { opacity: 1; }
+    .platform-top {
+      display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;
+    }
+    .platform-icon-box {
+      width: 44px; height: 44px; border-radius: 12px;
+      display: grid; place-items: center; color: #fff;
+      box-shadow: 0 6px 14px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+    }
+    .platform-showcase-card h4 { font-size: 1.05rem; font-weight: 700; margin-bottom: 4px; color: var(--ink); }
+    .platform-showcase-card p { font-size: 0.82rem; color: var(--ink2); }
+    .platform-arrow {
+      color: var(--ink3); transition: transform 0.2s, color 0.2s;
+    }
+    .platform-showcase-card:hover .platform-arrow {
+      transform: translateX(3px); color: var(--accent);
+    }
 
-    .faq {
-      background: var(--surface); border: 1px solid var(--line);
-      border-radius: var(--radius); max-width: 760px;
+    /* 3D Steps */
+    .steps-3d {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; list-style: none;
     }
-    .faq details { border-bottom: 1px solid var(--line); }
-    .faq details:last-child { border-bottom: none; }
-    .faq summary {
-      list-style: none; cursor: pointer;
-      padding: 18px 22px; font-size: 0.95rem; font-weight: 600;
-      display: flex; justify-content: space-between; align-items: center; gap: 16px;
+    .step-card-3d {
+      background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+      border: 1px solid var(--line);
+      border-radius: 20px; padding: 30px;
+      box-shadow: var(--shadow-card);
+      position: relative;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
     }
-    .faq summary::-webkit-details-marker { display: none; }
-    .faq summary::after {
-      content: ""; width: 8px; height: 8px; flex-shrink: 0;
-      border-right: 2px solid var(--ink3); border-bottom: 2px solid var(--ink3);
-      transform: rotate(45deg); transition: transform .15s;
+    .step-card-3d:hover {
+      transform: translateY(-5px);
+      box-shadow: var(--shadow-card-hover);
     }
-    .faq details[open] summary::after { transform: rotate(-135deg); }
-    .faq details p { padding: 0 22px 18px; font-size: 0.9rem; color: var(--ink2); max-width: 640px; }
+    .step-badge-3d {
+      width: 44px; height: 44px; border-radius: 14px;
+      background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%);
+      color: #fff; font-size: 1.1rem; font-weight: 800;
+      display: grid; place-items: center; margin-bottom: 18px;
+      box-shadow: 0 6px 16px rgba(15, 23, 42, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    }
+    .step-card-3d h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 8px; color: var(--ink); }
+    .step-card-3d p { font-size: 0.9rem; color: var(--ink2); line-height: 1.6; }
 
-    /* ── Footer ── */
-    footer { background: var(--navy); color: #b9c6dc; margin-top: 88px; }
+    /* ── 3D Footer ── */
+    footer {
+      background: linear-gradient(180deg, #0a172e 0%, #050b16 100%);
+      color: #94a3b8; margin-top: 104px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      position: relative;
+    }
     .footer-top {
-      display: grid; grid-template-columns: 1.6fr 1fr 1fr; gap: 32px;
-      padding: 48px 0 36px;
+      display: grid; grid-template-columns: 1.6fr 1fr 1fr; gap: 36px;
+      padding: 56px 0 40px;
     }
-    .footer-brand p { font-size: 0.85rem; margin-top: 12px; max-width: 320px; }
-    footer h4 { color: #fff; font-size: 0.85rem; font-weight: 600; margin-bottom: 12px; }
-    footer ul { list-style: none; display: grid; gap: 8px; }
-    footer a { color: #b9c6dc; text-decoration: none; font-size: 0.85rem; }
+    .footer-brand p { font-size: 0.88rem; margin-top: 14px; max-width: 320px; line-height: 1.6; }
+    footer h4 { color: #fff; font-size: 0.92rem; font-weight: 700; margin-bottom: 14px; }
+    footer ul { list-style: none; display: grid; gap: 10px; }
+    footer a { color: #94a3b8; text-decoration: none; font-size: 0.88rem; font-weight: 500; transition: color .2s; }
     footer a:hover { color: #fff; }
     .footer-bottom {
-      border-top: 1px solid rgba(255,255,255,.1);
-      padding: 18px 0; font-size: 0.78rem;
+      border-top: 1px solid rgba(255,255,255,.08);
+      padding: 22px 0; font-size: 0.82rem;
       display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;
     }
 
     /* ── Responsive ── */
+    @media (max-width: 860px) {
+      .features-grid-3d, .steps-3d { grid-template-columns: 1fr; gap: 16px; }
+      .footer-top { grid-template-columns: 1fr; gap: 28px; }
+    }
     @media (max-width: 760px) {
       .nav-links { display: none; }
-      .hero { padding: 44px 0 116px; }
-      .hero h1 { font-size: 1.9rem; }
-      .tool { padding: 20px; }
-      .tool-head { flex-direction: column; gap: 2px; }
+      .nav-toggle { display: inline-flex; }
+      .nav-links.open {
+        display: flex; flex-direction: column; align-items: stretch;
+        position: absolute; top: 68px; left: 0; right: 0;
+        background: rgba(6, 15, 30, 0.98);
+        padding: 16px 24px; border-bottom: 1px solid rgba(255,255,255,0.1);
+        box-shadow: 0 15px 30px rgba(0,0,0,0.4);
+      }
+      .hero { padding: 48px 0 120px; }
+      .hero h1 { font-size: 2.1rem; }
+      .tool { padding: 22px; border-radius: 20px; }
+      .tool-head { flex-direction: column; gap: 4px; }
       .input-wrap { flex-direction: column; }
-      .btn-download { padding: 14px 28px; }
-      .steps { grid-template-columns: 1fr; }
-      .footer-top { grid-template-columns: 1fr; }
-      .result-header, .download-list { padding-left: 16px; padding-right: 16px; }
-      .video-preview-wrap { padding: 16px 16px 0; }
+      .btn-download { padding: 15px 28px; }
+      .result-header, .download-list { padding-left: 18px; padding-right: 18px; }
+      .video-preview-wrap { padding: 18px 18px 0; }
 
-      /* Download item mobile — rapi 2 baris */
       .download-item {
-        flex-wrap: nowrap;
-        align-items: center;
-        gap: 10px;
-        padding: 12px 0;
+        align-items: center; gap: 12px; padding: 12px 14px;
       }
-      .dl-icon { width: 32px; height: 32px; flex-shrink: 0; }
-      .dl-info { flex: 1; min-width: 0; }
-      .dl-label { font-size: 0.82rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-      .dl-title-row { flex-wrap: wrap; gap: 4px; }
-      .dl-badge { font-size: 0.65rem; padding: 1px 5px; }
-      .dl-desc { font-size: 0.72rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-      .btn-dl {
-        margin-left: 0;
-        flex-shrink: 0;
-        padding: 8px 14px;
-        font-size: 0.78rem;
-      }
+      .dl-icon { width: 36px; height: 36px; }
+      .dl-label { font-size: 0.88rem; }
+      .btn-dl { padding: 8px 14px; font-size: 0.8rem; }
       .btn-dl svg { display: none; }
     }
     @media (max-width: 480px) {
-      .container { padding: 0 14px; }
-      .tool { padding: 16px; }
-      .result-header { gap: 10px; }
-      .result-thumb, .result-thumb-placeholder { width: 52px; height: 52px; }
-      .result-title { font-size: 0.85rem; }
+      .container { padding: 0 16px; }
+      .tool { padding: 18px; }
+      .hero h1 { font-size: 1.85rem; }
+      .platform-btn { padding: 8px 14px; font-size: 0.8rem; }
     }
     @media (prefers-reduced-motion: reduce) {
       * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
@@ -399,7 +722,7 @@
 </head>
 <body>
 
-  <!-- Navbar -->
+  <!-- 3D Glass Navbar -->
   <header class="nav">
     <div class="container nav-inner">
       <a class="logo" href="#">
@@ -423,60 +746,74 @@
     </div>
   </header>
 
-  <!-- Hero -->
+  <!-- 3D Hero -->
   <section class="hero">
-    <div class="container">
-      <h1>Simpan video dari media sosial dengan cepat dan rapi</h1>
-      <p>Tempel tautan dari TikTok, Instagram, YouTube, dan platform lainnya. Pilih kualitas yang tersedia, lalu unduh.</p>
+    <div class="hero-orb orb-1"></div>
+    <div class="hero-orb orb-2"></div>
+    <div class="hero-orb orb-3"></div>
+    <div class="hero-grid"></div>
+
+    <div class="container hero-content">
+      <div class="hero-badge-3d">
+        <span class="badge-dot"></span>
+        <span>Droply 3.0 &bull; Pengunduh Media Sosial Modern</span>
+      </div>
+      <h1>Simpan video resolusi tinggi dengan cepat, rapi, dan mudah</h1>
+      <p>Tempel tautan video dari TikTok, Instagram, YouTube, dan platform lainnya. Unduh langsung berkualitas HD hingga 4K tanpa berpindah halaman.</p>
       <ul class="hero-points">
-        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Gratis digunakan</li>
-        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Tanpa instalasi aplikasi</li>
-        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>7 platform didukung</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>100% Gratis Selamanya</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Tanpa Perlu Instalasi</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Mendukung 7 Platform Populer</li>
       </ul>
     </div>
   </section>
 
   <main class="container">
 
-    <!-- Downloader -->
-    <div class="tool">
-      <div class="tool-head">
-        <h2 class="tool-title">Unduh video</h2>
-        <span class="tool-sub">Platform terdeteksi otomatis dari tautan</span>
-      </div>
-
-      <div class="platforms" role="group" aria-label="Pilih platform">
-        <button class="platform-btn active" data-platform="tiktok">TikTok</button>
-        <button class="platform-btn" data-platform="instagram">Instagram</button>
-        <button class="platform-btn" data-platform="youtube">YouTube</button>
-        <button class="platform-btn" data-platform="twitter">Twitter / X</button>
-        <button class="platform-btn" data-platform="facebook">Facebook</button>
-        <button class="platform-btn" data-platform="threads">Threads</button>
-        <button class="platform-btn" data-platform="pinterest">Pinterest</button>
-      </div>
-
-      <div class="input-wrap">
-        <div class="url-field">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.5 1.5"/><path d="M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1.5-1.5"/></svg>
-          <input
-            type="url" class="url-input" id="urlInput"
-            placeholder="https://www.tiktok.com/@user/video/..."
-            aria-label="Tautan video"
-            autocomplete="off" spellcheck="false"
-          />
+    <!-- 3D Downloader Card -->
+    <div class="tool-wrapper" id="toolWrapper">
+      <div class="tool" id="mainTool">
+        <div class="tool-head">
+          <h2 class="tool-title">Unduh Video Favorit Anda</h2>
+          <span class="tool-sub">Platform otomatis terdeteksi dari tautan</span>
         </div>
-        <button class="btn-download" id="fetchBtn" onclick="fetchDownload()">
-          <span class="spinner" id="spinner"></span>
-          <svg id="btnIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <span id="btnText">Cari</span>
-        </button>
-      </div>
-      <p class="form-hint">Video harus bersifat publik agar bisa diproses.</p>
 
-      <div class="notice" id="notice" role="alert"></div>
+        <div class="platforms" role="group" aria-label="Pilih platform">
+          <button class="platform-btn active" data-platform="tiktok">TikTok</button>
+          <button class="platform-btn" data-platform="instagram">Instagram</button>
+          <button class="platform-btn" data-platform="youtube">YouTube</button>
+          <button class="platform-btn" data-platform="twitter">Twitter / X</button>
+          <button class="platform-btn" data-platform="facebook">Facebook</button>
+          <button class="platform-btn" data-platform="threads">Threads</button>
+          <button class="platform-btn" data-platform="pinterest">Pinterest</button>
+        </div>
+
+        <div class="input-wrap">
+          <div class="url-field">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.5 1.5"/><path d="M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1.5-1.5"/></svg>
+            <input
+              type="url" class="url-input" id="urlInput"
+              placeholder="https://www.tiktok.com/@user/video/..."
+              aria-label="Tautan video"
+              autocomplete="off" spellcheck="false"
+            />
+          </div>
+          <button class="btn-download" id="fetchBtn" onclick="fetchDownload()">
+            <span class="spinner" id="spinner"></span>
+            <svg id="btnIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <span id="btnText">Cari</span>
+          </button>
+        </div>
+        <p class="form-hint">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          Pastikan tautan bersifat publik agar video dapat diambil dengan lancar.
+        </p>
+
+        <div class="notice" id="notice" role="alert"></div>
+      </div>
     </div>
 
-    <!-- Result -->
+    <!-- 3D Result Card -->
     <section id="result" aria-live="polite">
       <div class="result-header">
         <div id="thumbWrap"></div>
@@ -492,8 +829,160 @@
       <div class="download-list" id="downloadList"></div>
     </section>
 
-    </main>
+    <!-- 3D Features Showcase -->
+    <section class="block-3d">
+      <div class="section-header">
+        <span class="section-badge-3d">Fitur Modern</span>
+        <h2>Pengalaman Mengunduh Terbaik</h2>
+        <p>Dirancang dengan teknologi terkini untuk kecepatan maksimal, kenyamanan visual, dan privasi penuh.</p>
+      </div>
 
+      <div class="features-grid-3d">
+        <div class="feature-card-3d">
+          <div class="feature-icon-3d icon-blue">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          </div>
+          <h3>Kecepatan Instan</h3>
+          <p>Dukungan server CDN multi-gigabit membuat file langsung mengalir ke perangkat Anda tanpa antrean.</p>
+        </div>
+
+        <div class="feature-card-3d">
+          <div class="feature-icon-3d icon-purple">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </div>
+          <h3>Tanpa Iklan Menjebak</h3>
+          <p>Bersih dan aman. Tidak ada pop-up mencurigakan atau redirect iklan yang mengganggu layar Anda.</p>
+        </div>
+
+        <div class="feature-card-3d">
+          <div class="feature-icon-3d icon-cyan">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          </div>
+          <h3>Resolusi Penuh Hingga 4K</h3>
+          <p>Mendukung format MP4 kualitas tertinggi serta audio murni MP3 dengan ukuran asli tanpa kompresi berlebih.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3D Supported Platforms Grid -->
+    <section class="block-3d">
+      <div class="section-header">
+        <span class="section-badge-3d">Platform Terhubung</span>
+        <h2>Mendukung Seluruh Media Sosial</h2>
+        <p>Klik salah satu platform di bawah untuk mengaktifkan pilihan downloader secara otomatis.</p>
+      </div>
+
+      <div class="platform-grid-3d">
+        <div class="platform-showcase-card" onclick="selectPlatformQuick('tiktok')" style="--card-glow: rgba(6,182,212,0.12); --card-border: #06b6d4;">
+          <div class="platform-top">
+            <div class="platform-icon-box" style="background: linear-gradient(135deg, #010101 0%, #181818 100%);">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"/></svg>
+            </div>
+            <span class="platform-arrow">&rarr;</span>
+          </div>
+          <div>
+            <h4>TikTok</h4>
+            <p>Video HD tanpa watermark & audio sound asli.</p>
+          </div>
+        </div>
+
+        <div class="platform-showcase-card" onclick="selectPlatformQuick('instagram')" style="--card-glow: rgba(236,72,153,0.12); --card-border: #ec4899;">
+          <div class="platform-top">
+            <div class="platform-icon-box" style="background: linear-gradient(135deg, #833ab4 0%, #fd1d1d 50%, #fcb045 100%);">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+            </div>
+            <span class="platform-arrow">&rarr;</span>
+          </div>
+          <div>
+            <h4>Instagram</h4>
+            <p>Unduh Reels, video Feed, dan Carousel foto.</p>
+          </div>
+        </div>
+
+        <div class="platform-showcase-card" onclick="selectPlatformQuick('youtube')" style="--card-glow: rgba(239,68,68,0.12); --card-border: #ef4444;">
+          <div class="platform-top">
+            <div class="platform-icon-box" style="background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17"/><polygon points="10 15 15 12 10 9 10 15"/></svg>
+            </div>
+            <span class="platform-arrow">&rarr;</span>
+          </div>
+          <div>
+            <h4>YouTube</h4>
+            <p>Video MP4 hingga 4K dan konversi audio MP3.</p>
+          </div>
+        </div>
+
+        <div class="platform-showcase-card" onclick="selectPlatformQuick('twitter')" style="--card-glow: rgba(148,163,184,0.15); --card-border: #64748b;">
+          <div class="platform-top">
+            <div class="platform-icon-box" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4l11.733 16h4.267l-11.733 -16z"/><path d="M4 20l6.768 -6.768m2.46 -2.46l6.772 -6.772"/></svg>
+            </div>
+            <span class="platform-arrow">&rarr;</span>
+          </div>
+          <div>
+            <h4>Twitter / X</h4>
+            <p>Simpan klip video dan GIF dari postingan.</p>
+          </div>
+        </div>
+
+        <div class="platform-showcase-card" onclick="selectPlatformQuick('facebook')" style="--card-glow: rgba(37,99,235,0.12); --card-border: #2563eb;">
+          <div class="platform-top">
+            <div class="platform-icon-box" style="background: linear-gradient(135deg, #1877f2 0%, #0d5bbd 100%);">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+            </div>
+            <span class="platform-arrow">&rarr;</span>
+          </div>
+          <div>
+            <h4>Facebook</h4>
+            <p>Unduh video Reels & tayangan video Watch.</p>
+          </div>
+        </div>
+
+        <div class="platform-showcase-card" onclick="selectPlatformQuick('pinterest')" style="--card-glow: rgba(225,29,72,0.12); --card-border: #e11d48;">
+          <div class="platform-top">
+            <div class="platform-icon-box" style="background: linear-gradient(135deg, #e60023 0%, #9b0017 100%);">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+            </div>
+            <span class="platform-arrow">&rarr;</span>
+          </div>
+          <div>
+            <h4>Pinterest</h4>
+            <p>Koleksi ide video dan foto resolusi penuh.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3D Steps -->
+    <section class="block-3d">
+      <div class="section-header">
+        <span class="section-badge-3d">Mudah Digunakan</span>
+        <h2>3 Langkah Praktis</h2>
+        <p>Tidak perlu keahlian teknis atau login akun. Simpan video dalam hitungan detik.</p>
+      </div>
+
+      <ol class="steps-3d">
+        <li class="step-card-3d">
+          <div class="step-badge-3d">1</div>
+          <h3>Salin Tautan</h3>
+          <p>Buka aplikasi media sosial pilihan Anda, tekan tombol Bagikan (Share), lalu pilih Salin Tautan (Copy Link).</p>
+        </li>
+        <li class="step-card-3d">
+          <div class="step-badge-3d">2</div>
+          <h3>Tempel di Kolom</h3>
+          <p>Tempelkan tautan yang disalin ke kolom pencarian di atas. Platform akan terdeteksi secara otomatis.</p>
+        </li>
+        <li class="step-card-3d">
+          <div class="step-badge-3d">3</div>
+          <h3>Unduh Langsung</h3>
+          <p>Pilih kualitas resolusi yang Anda inginkan, klik Unduh, dan video akan langsung tersimpan di folder perangkat Anda.</p>
+        </li>
+      </ol>
+    </section>
+
+  </main>
+
+  <!-- 3D Footer -->
   <footer>
     <div class="container">
       <div class="footer-top">
@@ -504,7 +993,7 @@
             </span>
             <span class="logo-name">Droply</span>
           </a>
-          <p>Unduh video dari media sosial dengan cepat, langsung dari browser.</p>
+          <p>Unduh video dari berbagai media sosial dengan cepat, rapi, dan langsung dari browser tanpa aplikasi tambahan.</p>
         </div>
         <div>
           <h4>Navigasi</h4>
@@ -530,6 +1019,44 @@
   </footer>
 
   <script src="app.js?v=22"></script>
+  <script>
+    // Quick platform selector from showcase cards
+    function selectPlatformQuick(platform) {
+      const btn = document.querySelector(`.platform-btn[data-platform="${platform}"]`);
+      if (btn) btn.click();
+      const input = document.getElementById('urlInput');
+      if (input) {
+        input.focus();
+        document.getElementById('toolWrapper').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+
+    // Subtle 3D Card Tilt Effect on Desktop
+    (function init3DTilt() {
+      if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+        const card = document.getElementById('mainTool');
+        const wrapper = document.getElementById('toolWrapper');
+        if (!card || !wrapper) return;
+
+        wrapper.addEventListener('mousemove', (e) => {
+          const rect = card.getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          const y = e.clientY - rect.top;
+          const centerX = rect.width / 2;
+          const centerY = rect.height / 2;
+
+          const rotateX = ((y - centerY) / centerY) * -3.5;
+          const rotateY = ((x - centerX) / centerX) * 3.5;
+
+          card.style.transform = `perspective(1000px) rotateX(${rotateX.toFixed(2)}deg) rotateY(${rotateY.toFixed(2)}deg) translateY(-2px)`;
+        });
+
+        wrapper.addEventListener('mouseleave', () => {
+          card.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) translateY(0)';
+        });
+      }
+    })();
+  </script>
 
 </body>
 </html>
