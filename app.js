@@ -350,18 +350,19 @@ function showNotice(msg, type = 'info') {
 function hideNotice() { document.getElementById('notice').style.display = 'none'; }
 function hideResult()  { document.getElementById('result').style.display  = 'none'; }
 
-function triggerDownload(downloadUrl, filename) {
-  // Gunakan iframe tersembunyi agar halaman Droply TIDAK PERNAH berpindah atau reload
-  const iframe = document.createElement('iframe');
-  iframe.style.display = 'none';
-  iframe.src = downloadUrl;
-  document.body.appendChild(iframe);
-
+function triggerDownload(targetUrl, filename) {
+  const a = document.createElement('a');
+  a.href = targetUrl;
+  a.download = filename || 'video.mp4';
+  a.rel = 'noopener noreferrer';
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
   setTimeout(() => {
     try {
-      if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+      if (a.parentNode) a.parentNode.removeChild(a);
     } catch (e) {}
-  }, 60000);
+  }, 1000);
 }
 
 function startDownload(e, url, filename) {
@@ -377,22 +378,48 @@ function startDownload(e, url, filename) {
     safeName += '.mp4';
   }
 
-  showNotice('Mengunduh... file otomatis tersimpan tanpa pindah halaman.', 'info');
+  // Visual feedback pada tombol yang diklik
+  const btn = e ? (e.currentTarget || (e.target && e.target.closest('button'))) : null;
+  let originalHtml = '';
+  if (btn) {
+    originalHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.style.opacity = '0.9';
+    btn.innerHTML = `
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="animation: spin 1s linear infinite; display: inline-block;">
+        <circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle>
+        <path d="M12 2a10 10 0 0 1 10 10"></path>
+      </svg>
+      Mengunduh...
+    `;
+  }
+
+  showNotice('Mengunduh... file otomatis tersimpan di folder Downloads.', 'info');
 
   try {
-    // Jalankan unduhan melalui /api/download dengan iframe tersembunyi
-    // Menjamin:
-    // 1. Halaman Droply TIDAK PERNAH berpindah / buka tab baru
-    // 2. Video besar (Savetube CDN) otomatis di-redirect 302 ke CDN langsung
-    // 3. Video lama (GoogleVideo) & platform lain dialirkan dengan header Content-Disposition: attachment
-    const dlUrl = `/api/download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(safeName)}`;
-    triggerDownload(dlUrl, safeName);
+    // 1. Jika URL Savetube (YouTube HD): langsung unduh dari CDN berkecepatan tinggi
+    // yang sudah memiliki header Content-Disposition: attachment bawaan (tanpa pindah halaman)
+    if (url.includes('savetube.vip') || url.includes('savetube.me')) {
+      triggerDownload(url, safeName);
+    } else {
+      // 2. Untuk URL lain (GoogleVideo / TikTok / Instagram):
+      // Unduh lewat streaming /api/download agar server memasangkan header attachment
+      const dlUrl = `/api/download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(safeName)}`;
+      triggerDownload(dlUrl, safeName);
+    }
   } catch (err) {
     console.error(err);
     showNotice('Gagal memulai unduhan.', 'error');
   }
 
-  setTimeout(hideNotice, 3500);
+  setTimeout(() => {
+    if (btn && originalHtml) {
+      btn.disabled = false;
+      btn.style.opacity = '1';
+      btn.innerHTML = originalHtml;
+    }
+    hideNotice();
+  }, 3500);
 }
 
 const forceDownload = (url, label) => startDownload(null, url, label);
