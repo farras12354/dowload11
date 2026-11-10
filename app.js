@@ -343,8 +343,8 @@ async function startDownload(e, url, label) {
   showNotice('Mengunduh... harap tunggu', 'info');
 
   try {
-    // Unduh lewat dl.php (streaming PHP) agar file besar tidak 0 bytes.
-    const dlUrl = `dl.php?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(label || 'video')}`;
+    // Unduh lewat /api/download (Node.js streaming) agar file besar tidak 0 bytes.
+    const dlUrl = `/api/download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(label || 'video')}`;
     window.location.href = dlUrl;
   } catch (err) {
     console.error(err);
