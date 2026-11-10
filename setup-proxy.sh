@@ -40,6 +40,9 @@ server {
         proxy_buffer_size 128k;
         proxy_buffers 8 256k;
         proxy_busy_buffers_size 512k;
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_buffering off;
 
         add_header Access-Control-Allow-Origin * always;
         add_header Access-Control-Allow-Methods "GET, POST, OPTIONS" always;
@@ -79,6 +82,9 @@ server {
         proxy_buffer_size 128k;
         proxy_buffers 8 256k;
         proxy_busy_buffers_size 512k;
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_buffering off;
 
         add_header Access-Control-Allow-Origin * always;
         add_header Access-Control-Allow-Methods "GET, POST, OPTIONS" always;
@@ -95,3 +101,5 @@ NGINXCONF
 nginx -t && systemctl restart nginx
 
 echo "Done! Proxy siap. Pastikan DNS A record zhaffdownloader.web.id -> IP server sudah diset (Cloudflare: DNS only, bukan proxied, karena port 20142 tidak didukung Cloudflare proxy)."
+
+

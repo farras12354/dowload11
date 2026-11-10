@@ -1,4 +1,9 @@
 <?php
+// Tanpa batas waktu eksekusi untuk file besar
+set_time_limit(0);
+ignore_user_abort(true);
+ini_set('memory_limit', '256M');
+
 $url      = isset($_GET['url'])      ? trim($_GET['url'])      : '';
 $filename = isset($_GET['filename']) ? trim($_GET['filename']) : 'video.mp4';
 
@@ -21,8 +26,8 @@ curl_setopt_array($ch, [
     CURLOPT_MAXREDIRS      => 10,
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_SSL_VERIFYPEER => false,
-    CURLOPT_CONNECTTIMEOUT => 10,
-    CURLOPT_TIMEOUT        => 15,
+    CURLOPT_CONNECTTIMEOUT => 15,
+    CURLOPT_TIMEOUT        => 30,
     CURLOPT_USERAGENT      => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
 ]);
 curl_exec($ch);
@@ -32,14 +37,14 @@ curl_close($ch);
 
 $finalUrl = $finalUrl ?: $url;
 
-// Stream file ke browser
+// Stream file ke browser (tanpa menampung di memori/server)
 $ch2 = curl_init($finalUrl);
 curl_setopt_array($ch2, [
     CURLOPT_FOLLOWLOCATION => true,
     CURLOPT_MAXREDIRS      => 5,
     CURLOPT_RETURNTRANSFER => false,
     CURLOPT_SSL_VERIFYPEER => false,
-    CURLOPT_CONNECTTIMEOUT => 15,
+    CURLOPT_CONNECTTIMEOUT => 20,
     CURLOPT_TIMEOUT        => 0,
     CURLOPT_BUFFERSIZE     => 131072,
     CURLOPT_USERAGENT      => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
@@ -68,6 +73,7 @@ header('Content-Disposition: attachment; filename="' . $filename . '"; filename*
 header('Access-Control-Allow-Origin: *');
 header('Cache-Control: no-cache');
 header('X-Content-Type-Options: nosniff');
+header('Accept-Ranges: bytes');
 
 if (ob_get_level() > 0) ob_end_clean();
 

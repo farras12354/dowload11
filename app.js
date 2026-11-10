@@ -335,30 +335,18 @@ function hideResult()  { document.getElementById('result').style.display  = 'non
 async function startDownload(e, url, label) {
   if (e && e.preventDefault) e.preventDefault();
 
-  const cleanUrl = url.split('?')[0];
-  const ext = cleanUrl.split('.').pop().toLowerCase();
-  const lower = (label || '').toLowerCase();
-  const isAudio = ['mp3', 'aac', 'ogg', 'm4a'].includes(ext) || lower.includes('audio') || lower.includes('musik');
-  const fileExt = isAudio ? 'mp3' : 'mp4';
+  if (!url || !url.startsWith('http')) {
+    showNotice('Tautan unduhan tidak valid.', 'error');
+    return;
+  }
 
-  // Selalu route lewat proxy /api/download supaya tidak pindah halaman
-  const videoTitle = document.getElementById('resultTitle')?.textContent || '';
-  const baseTitle = videoTitle && videoTitle !== '—' ? videoTitle : (label || 'video');
-  const safeName = baseTitle.replace(/[/\\?%*:|"<>]/g, '_').trim().slice(0, 50) || 'Droply';
-  const filename = `${safeName}.${fileExt}`;
-
-  const proxyUrl = `/api/download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(filename)}`;
-
-  // Trigger download via hidden <a> ke proxy kita — tidak pindah halaman
   showNotice('Mengunduh... harap tunggu', 'info');
-  const a = document.createElement('a');
-  a.href = proxyUrl;
-  a.download = filename;
-  a.style.display = 'none';
-  document.body.appendChild(a);
-  a.click();
+
+  // Langsung arahkan browser ke URL sumber video — TIDAK lewat proxy PHP
+  // Ini menghindari masalah 0 bytes saat proxy gagal fetch YouTube/googlevideo
+  window.location.href = url;
+
   setTimeout(() => {
-    document.body.removeChild(a);
     hideNotice();
   }, 3000);
 }
