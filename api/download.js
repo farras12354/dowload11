@@ -1,5 +1,4 @@
-const https = require('https');
-const http = require('http');
+const { Readable } = require('stream');
 
 module.exports = async (req, res) => {
   const fileUrl = req.query.url;
@@ -9,96 +8,69 @@ module.exports = async (req, res) => {
     return res.status(400).send('Parameter url wajib diisi.');
   }
 
-  // Jika tidak ada ekstensi file, tambahkan .mp4 sebagai default
+  // Pastikan memiliki ekstensi file yang valid
   if (!/\.[a-zA-Z0-9]{2,5}$/.test(rawFilename)) {
     rawFilename += '.mp4';
   }
   const safeAscii = rawFilename.replace(/[^a-zA-Z0-9._-]/g, '_');
 
-  // Jika URL berasal dari savetube / CDN yang sudah memiliki header attachment:
-  // Redirect 302 langsung ke CDN agar di-download langsung oleh browser pengguna
-  // tanpa melalui batasan waktu dan bandwidth serverless Vercel (krusial untuk video YouTube besar)
   try {
-    const parsedTest = new URL(fileUrl);
-    if (parsedTest.hostname.includes('savetube.vip') || parsedTest.hostname.includes('savetube.me')) {
+    const parsed = new URL(fileUrl);
+    // Jika URL savetube, redirect 302 langsung ke CDN agar cepat & tanpa batas waktu Vercel
+    if (parsed.hostname.includes('savetube.vip') || parsed.hostname.includes('savetube.me')) {
       return res.redirect(302, fileUrl);
     }
   } catch (err) {
     return res.status(400).send('URL tidak valid.');
   }
 
-  function fetchStream(url, depth = 0) {
-    if (depth > 5) {
-      return res.status(500).send('Too many redirects.');
+  try {
+    const requestHeaders = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept': '*/*'
+    };
+
+    if (req.headers.range) {
+      requestHeaders['Range'] = req.headers.range;
     }
 
-    try {
-      const client = url.startsWith('https') ? https : http;
-      const parsed = new URL(url);
+    const upstreamRes = await fetch(fileUrl, {
+      headers: requestHeaders,
+      redirect: 'follow'
+    });
 
-      const requestHeaders = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': '*/*',
-        'Accept-Encoding': 'identity'
-      };
+    if (!upstreamRes.ok && upstreamRes.status >= 400) {
+      // Jika upstream menolak request serverless (contoh: 403), fallback redirect ke URL
+      return res.redirect(302, fileUrl);
+    }
 
-      if (req.headers.range) {
-        requestHeaders['Range'] = req.headers.range;
-      }
+    const contentType = upstreamRes.headers.get('content-type') || 'application/octet-stream';
+    const responseHeaders = {
+      'Content-Type': contentType,
+      'Content-Disposition': `attachment; filename="${safeAscii}"; filename*=UTF-8''${encodeURIComponent(rawFilename)}`,
+      'Access-Control-Allow-Origin': '*',
+      'Cache-Control': 'no-cache'
+    };
 
-      const options = {
-        protocol: parsed.protocol,
-        hostname: parsed.hostname,
-        port: parsed.port,
-        path: parsed.pathname + parsed.search,
-        headers: requestHeaders
-      };
+    if (upstreamRes.headers.has('content-length')) {
+      responseHeaders['Content-Length'] = upstreamRes.headers.get('content-length');
+    }
+    if (upstreamRes.headers.has('accept-ranges')) {
+      responseHeaders['Accept-Ranges'] = upstreamRes.headers.get('accept-ranges');
+    }
+    if (upstreamRes.headers.has('content-range')) {
+      responseHeaders['Content-Range'] = upstreamRes.headers.get('content-range');
+    }
 
-      const upstreamReq = client.get(options, (upstreamRes) => {
-        if (upstreamRes.statusCode >= 300 && upstreamRes.statusCode < 400 && upstreamRes.headers.location) {
-          const nextUrl = new URL(upstreamRes.headers.location, url).href;
-          return fetchStream(nextUrl, depth + 1);
-        }
-
-        if (upstreamRes.statusCode >= 400) {
-          // Jika upstream memblokir server (contoh 403 IP datacenter dari GoogleVideo),
-          // fallback redirect langsung ke URL agar browser pengguna (IP residensial) yang mengunduh
-          return res.redirect(302, url);
-        }
-
-        const contentType = upstreamRes.headers['content-type'] || 'application/octet-stream';
-        const headers = {
-          'Content-Type': contentType,
-          'Content-Disposition': `attachment; filename="${safeAscii}"; filename*=UTF-8''${encodeURIComponent(rawFilename)}`,
-          'Access-Control-Allow-Origin': '*',
-          'Cache-Control': 'no-cache'
-        };
-
-        if (upstreamRes.headers['content-length']) {
-          headers['Content-Length'] = upstreamRes.headers['content-length'];
-        }
-        if (upstreamRes.headers['accept-ranges']) {
-          headers['Accept-Ranges'] = upstreamRes.headers['accept-ranges'];
-        }
-        if (upstreamRes.headers['content-range']) {
-          headers['Content-Range'] = upstreamRes.headers['content-range'];
-        }
-
-        res.writeHead(upstreamRes.statusCode === 206 ? 206 : 200, headers);
-        upstreamRes.pipe(res);
-      });
-
-      upstreamReq.on('error', (err) => {
-        if (!res.headersSent) {
-          res.status(500).send('Gagal mengunduh file: ' + err.message);
-        }
-      });
-    } catch (e) {
-      if (!res.headersSent) {
-        res.status(500).send('Error: ' + e.message);
+    res.writeHead(upstreamRes.status === 206 ? 206 : 200, responseHeaders);
+    Readable.fromWeb(upstreamRes.body).pipe(res);
+  } catch (err) {
+    if (!res.headersSent) {
+      try {
+        return res.redirect(302, fileUrl);
+      } catch (e) {
+        return res.status(500).send('Gagal mengunduh: ' + err.message);
       }
     }
   }
-
-  fetchStream(fileUrl);
 };

@@ -350,6 +350,20 @@ function showNotice(msg, type = 'info') {
 function hideNotice() { document.getElementById('notice').style.display = 'none'; }
 function hideResult()  { document.getElementById('result').style.display  = 'none'; }
 
+function triggerDownload(downloadUrl, filename) {
+  // Gunakan iframe tersembunyi agar halaman Droply TIDAK PERNAH berpindah atau reload
+  const iframe = document.createElement('iframe');
+  iframe.style.display = 'none';
+  iframe.src = downloadUrl;
+  document.body.appendChild(iframe);
+
+  setTimeout(() => {
+    try {
+      if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+    } catch (e) {}
+  }, 60000);
+}
+
 function startDownload(e, url, filename) {
   if (e && e.preventDefault) e.preventDefault();
 
@@ -363,37 +377,22 @@ function startDownload(e, url, filename) {
     safeName += '.mp4';
   }
 
-  showNotice('Memulai unduhan...', 'info');
+  showNotice('Mengunduh... file otomatis tersimpan tanpa pindah halaman.', 'info');
 
   try {
-    // 1. Jika URL berasal dari savetube (YouTube) atau CDN yang sudah memiliki header attachment:
-    // Browser langsung men-download dari CDN tanpa lewat serverless Vercel.
-    // Ini krusial untuk file video besar (100MB - 1GB+) agar tidak terkena timeout 10-15s Vercel.
-    if (url.includes('savetube.vip') || url.includes('savetube.me')) {
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = safeName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(hideNotice, 2500);
-      return;
-    }
-
-    // 2. Untuk URL lain gunakan streaming proxy /api/download
+    // Jalankan unduhan melalui /api/download dengan iframe tersembunyi
+    // Menjamin:
+    // 1. Halaman Droply TIDAK PERNAH berpindah / buka tab baru
+    // 2. Video besar (Savetube CDN) otomatis di-redirect 302 ke CDN langsung
+    // 3. Video lama (GoogleVideo) & platform lain dialirkan dengan header Content-Disposition: attachment
     const dlUrl = `/api/download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(safeName)}`;
-    const a = document.createElement('a');
-    a.href = dlUrl;
-    a.download = safeName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    triggerDownload(dlUrl, safeName);
   } catch (err) {
     console.error(err);
     showNotice('Gagal memulai unduhan.', 'error');
   }
 
-  setTimeout(hideNotice, 2500);
+  setTimeout(hideNotice, 3500);
 }
 
 const forceDownload = (url, label) => startDownload(null, url, label);
