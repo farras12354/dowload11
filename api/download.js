@@ -60,6 +60,12 @@ module.exports = async (req, res) => {
           return fetchStream(nextUrl, depth + 1);
         }
 
+        if (upstreamRes.statusCode >= 400) {
+          // Jika upstream memblokir server (contoh 403 IP datacenter dari GoogleVideo),
+          // fallback redirect langsung ke URL agar browser pengguna (IP residensial) yang mengunduh
+          return res.redirect(302, url);
+        }
+
         const contentType = upstreamRes.headers['content-type'] || 'application/octet-stream';
         const headers = {
           'Content-Type': contentType,
