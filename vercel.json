@@ -1,4 +1,16 @@
 {
+  "functions": {
+    "api/download.js": {
+      "maxDuration": 60
+    }
+  },
+  "redirects": [
+    {
+      "source": "/dl.php",
+      "destination": "/api/download",
+      "permanent": false
+    }
+  ],
   "rewrites": [
     {
       "source": "/api/downloader/:endpoint",

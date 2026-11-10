@@ -161,7 +161,7 @@ function renderResult(data, platformLabel, sourceUrl, endpoint) {
   document.getElementById('resultAuthor').textContent    = author ? `@${String(author).replace(/^@/, '')}` : platformLabel;
   document.getElementById('resultPlatform').textContent  = platformLabel;
 
-  const items = collectDownloadItems(data);
+  const items = collectDownloadItems(data, title);
 
   // Video preview
   const d = data.data || data;
@@ -202,20 +202,36 @@ function renderResult(data, platformLabel, sourceUrl, endpoint) {
   document.getElementById('result').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
-function collectDownloadItems(data) {
+function collectDownloadItems(data, videoTitle = '') {
   const items = [];
   const d = data.data || data;
 
-  const push = (label, badge, desc, url, isPrimary = false) => {
+  const sanitizeName = s => String(s || '').replace(/[\\/:*?"<>|]/g, '_').replace(/\s+/g, ' ').trim();
+  const cleanTitle = sanitizeName(videoTitle || d.title || 'video');
+
+  const push = (label, badge, desc, url, isPrimary = false, customFilename = '') => {
     if (typeof url === 'string' && url.startsWith('http')) {
-      items.push({ label, badge, desc, url, isPrimary });
+      const cleanUrl = url.split('?')[0];
+      const urlExt = cleanUrl.split('.').pop().toLowerCase();
+      const isAudio = badge === 'MP3' || label.toLowerCase().includes('audio') || label.toLowerCase().includes('musik');
+      const ext = ['mp4', 'mp3', 'm4a', 'jpg', 'jpeg', 'png', 'webp'].includes(urlExt)
+        ? urlExt
+        : (isAudio ? 'mp3' : 'mp4');
+
+      const filename = customFilename || (cleanTitle ? `${cleanTitle} - ${label}.${ext}` : `video.${ext}`);
+      items.push({ label, badge, desc, url, isPrimary, filename });
     }
   };
 
   // YouTube
   if (Array.isArray(d.files)) {
     d.files.forEach((f, i) => {
-      push(f.quality || `Video ${i+1}`, f.contentType?.includes('audio') ? 'MP3' : 'MP4', f.filename || '', f.url, i === 0);
+      const isAud = f.contentType?.includes('audio') || (f.quality && f.quality.toLowerCase().includes('audio'));
+      const badge = isAud ? 'MP3' : 'MP4';
+      const label = f.quality || `Video ${i+1}`;
+      const ext = isAud ? 'mp3' : 'mp4';
+      const filename = f.filename ? sanitizeName(f.filename) : `${cleanTitle} - ${label}.${ext}`;
+      push(label, badge, f.filename || '', f.url, i === 0, filename);
     });
   }
 
@@ -224,7 +240,7 @@ function collectDownloadItems(data) {
     const dl = d.downloads[0];
     if (dl) {
       const primaryUrl = dl.url;
-      if (primaryUrl) push('Video HD', 'Tanpa watermark', 'Kualitas terbaik tanpa watermark', primaryUrl, true);
+      if (primaryUrl) push('Video HD', 'Tanpa watermark', 'Kualitas terbaik tanpa watermark', primaryUrl, true, `${cleanTitle}.mp4`);
     }
   }
 
@@ -232,20 +248,20 @@ function collectDownloadItems(data) {
   const media = d.media || d.result?.media;
   if (media && Array.isArray(media.videos)) {
     media.videos.forEach((v, i) => {
-      push(`Video ${media.videos.length > 1 ? i + 1 : ''}`.trim(), 'MP4', v.resolution || 'Kualitas asli', v.url, i === 0);
+      push(`Video ${media.videos.length > 1 ? i + 1 : ''}`.trim(), 'MP4', v.resolution || 'Kualitas asli', v.url, i === 0, `${cleanTitle}${media.videos.length > 1 ? '_' + (i+1) : ''}.mp4`);
     });
   }
 
   const meta = d.result?.metadata || d.metadata;
   if (meta && !media) {
-    push('Video', 'MP4', 'Kualitas asli', meta.videoUrl || meta.video_url, true);
+    push('Video', 'MP4', 'Kualitas asli', meta.videoUrl || meta.video_url, true, `${cleanTitle}.mp4`);
   }
 
-  push('Video HD',      'HD',     'Kualitas terbaik',   d.video_hd || d.videoHd || d.hd, items.length === 0);
-  push('Video standar', 'MP4',    'Kualitas standar',   d.video || d.video_url || d.videoUrl || d.download || d.url, items.length === 0);
-  push('Video SD',      'SD',     'Ukuran lebih hemat', d.video_sd || d.videoSd || d.sd, false);
-  push('Audio',         'MP3',    'Hanya suara',        d.audio || d.audio_url || d.musicUrl || d.mp3, false);
-  push('Foto',          'Gambar', 'Kualitas asli',      d.image || d.photo || d.img, false);
+  push('Video HD',      'HD',     'Kualitas terbaik',   d.video_hd || d.videoHd || d.hd, items.length === 0, `${cleanTitle}_HD.mp4`);
+  push('Video standar', 'MP4',    'Kualitas standar',   d.video || d.video_url || d.videoUrl || d.download || d.url, items.length === 0, `${cleanTitle}.mp4`);
+  push('Video SD',      'SD',     'Ukuran lebih hemat', d.video_sd || d.videoSd || d.sd, false, `${cleanTitle}_SD.mp4`);
+  push('Audio',         'MP3',    'Hanya suara',        d.audio || d.audio_url || d.musicUrl || d.mp3, false, `${cleanTitle}.mp3`);
+  push('Foto',          'Gambar', 'Kualitas asli',      d.image || d.photo || d.img, false, `${cleanTitle}.jpg`);
 
   if (Array.isArray(d.qualities)) {
     d.qualities.forEach((q, i) => push(q.label || q.quality || 'Video', 'MP4', q.size || '', q.url || q.link, i === 0));
@@ -259,7 +275,7 @@ function collectDownloadItems(data) {
   if (Array.isArray(d.images)) {
     d.images.forEach((img, i) => {
       const u = typeof img === 'string' ? img : (img?.url || img?.src);
-      push(`Gambar ${i + 1}`, 'JPG', 'Resolusi penuh', u, false);
+      push(`Gambar ${i + 1}`, 'JPG', 'Resolusi penuh', u, false, `${cleanTitle}_${i + 1}.jpg`);
     });
   }
 
@@ -276,7 +292,7 @@ function collectDownloadItems(data) {
   return items;
 }
 
-function createDownloadItem({ label, badge, desc, url, isPrimary }) {
+function createDownloadItem({ label, badge, desc, url, isPrimary, filename }) {
   if (typeof url !== 'string') return document.createElement('div');
   const cleanUrl = url.split('?')[0];
   const ext = cleanUrl.split('.').pop().toLowerCase();
@@ -292,6 +308,8 @@ function createDownloadItem({ label, badge, desc, url, isPrimary }) {
 
   const dlSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M8 11l4 4 4-4M5 20h14"/></svg>';
 
+  const chosenFilename = filename || (label ? `${label}.mp4` : 'video.mp4');
+
   const el = document.createElement('div');
   el.className = `download-item ${isPrimary ? 'is-primary' : ''}`;
   el.innerHTML = `
@@ -303,7 +321,7 @@ function createDownloadItem({ label, badge, desc, url, isPrimary }) {
       </div>
       ${desc ? `<div class="dl-desc">${esc(desc)}</div>` : ''}
     </div>
-    <button class="btn-dl ${isPrimary ? 'primary-btn' : ''}" onclick="startDownload(event, '${esc(url)}', '${esc(label)}')">
+    <button class="btn-dl ${isPrimary ? 'primary-btn' : ''}" onclick="startDownload(event, '${esc(url)}', '${esc(chosenFilename)}')">
       ${dlSvg}
       Unduh
     </button>
@@ -332,7 +350,7 @@ function showNotice(msg, type = 'info') {
 function hideNotice() { document.getElementById('notice').style.display = 'none'; }
 function hideResult()  { document.getElementById('result').style.display  = 'none'; }
 
-async function startDownload(e, url, label) {
+function startDownload(e, url, filename) {
   if (e && e.preventDefault) e.preventDefault();
 
   if (!url || !url.startsWith('http')) {
@@ -340,20 +358,42 @@ async function startDownload(e, url, label) {
     return;
   }
 
-  showNotice('Mengunduh... harap tunggu', 'info');
+  let safeName = String(filename || 'video.mp4').trim();
+  if (!/\.[a-zA-Z0-9]{2,5}$/.test(safeName)) {
+    safeName += '.mp4';
+  }
+
+  showNotice('Memulai unduhan...', 'info');
 
   try {
-    // Unduh lewat /api/download (Node.js streaming) agar file besar tidak 0 bytes.
-    const dlUrl = `/api/download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(label || 'video')}`;
-    window.location.href = dlUrl;
+    // 1. Jika URL berasal dari savetube (YouTube) atau CDN yang sudah memiliki header attachment:
+    // Browser langsung men-download dari CDN tanpa lewat serverless Vercel.
+    // Ini krusial untuk file video besar (100MB - 1GB+) agar tidak terkena timeout 10-15s Vercel.
+    if (url.includes('savetube.vip') || url.includes('savetube.me')) {
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = safeName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(hideNotice, 2500);
+      return;
+    }
+
+    // 2. Untuk URL lain gunakan streaming proxy /api/download
+    const dlUrl = `/api/download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(safeName)}`;
+    const a = document.createElement('a');
+    a.href = dlUrl;
+    a.download = safeName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   } catch (err) {
     console.error(err);
     showNotice('Gagal memulai unduhan.', 'error');
   }
 
-  setTimeout(() => {
-    hideNotice();
-  }, 3000);
+  setTimeout(hideNotice, 2500);
 }
 
 const forceDownload = (url, label) => startDownload(null, url, label);
