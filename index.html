@@ -43,6 +43,70 @@
       --shadow-md:  0 8px 32px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.4);
       --shadow-lg:  0 20px 60px rgba(0,0,0,0.7), 0 8px 24px rgba(0,0,0,0.5);
       --shadow-glow: 0 0 40px rgba(99,102,241,0.2), 0 20px 60px rgba(0,0,0,0.6);
+
+      /* 3D Extra Effects */
+      --3d-depth: 10px;
+      --3d-hover-depth: 20px;
+      --3d-rotate: 8deg;
+      --mesh-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 25%, #312e81 50%, #1e1b4b 75%, #0f172a 100%);
+    }
+
+    .hidden-section { display: none !important; }
+
+    /* ── Floating Background Orbs ── */
+    .orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(60px);
+      opacity: 0.35;
+      z-index: -1;
+      animation: float 12s ease-in-out infinite;
+    }
+    .floating-orb-1 { top: -10%; left: -10%; width: 600px; height: 600px; background: var(--accent); animation-delay: 0s; }
+    .floating-orb-2 { bottom: -10%; right: -10%; width: 500px; height: 500px; background: var(--purple); animation-delay: -4s; }
+    .floating-orb-3 { top: 20%; right: 15%; width: 400px; height: 400px; background: var(--cyan); animation-delay: -8s; }
+
+    @keyframes float {
+      0%, 100% { transform: translate(0, 0); }
+      50% { transform: translate(30px, -50px); }
+    }
+
+    /* ── 3D Card Hover Lift ── */
+    .card-3d, .feature-card-3d, .platform-showcase-card, .step-card-3d {
+      transition: transform 0.3s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.3s ease, border-color 0.3s ease;
+      transform-style: preserve-3d;
+    }
+    .card-3d:hover, .feature-card-3d:hover, .platform-showcase-card:hover, .step-card-3d:hover {
+      transform: translateY(-8px) scale(1.02);
+      box-shadow: var(--shadow-lg);
+      border-color: var(--border2);
+    }
+
+    /* ── 3D Button Press ── */
+    .btn-3d, .btn-dl {
+      position: relative;
+      transition: all 0.2s cubic-bezier(0.23, 1, 0.32, 1);
+      transform-style: preserve-3d;
+    }
+    .btn-3d:active, .btn-dl:active {
+      transform: translateZ(-4px) scale(0.97);
+      filter: brightness(0.9);
+    }
+
+    /* ── Gradient Text ── */
+    .text-gradient {
+      background: linear-gradient(135deg, #fff 0%, var(--accent2) 50%, var(--cyan) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* ── Section Background Mesh ── */
+    .block-3d {
+      background: linear-gradient(180deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0.01) 100%);
+      border-top: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
     }
 
     html { scroll-behavior: smooth; }
@@ -151,9 +215,9 @@
       filter: blur(90px); pointer-events: none;
       animation: orbFloat 10s ease-in-out infinite alternate;
     }
-    .orb-1 { width: 500px; height: 500px; background: rgba(99,102,241,0.2); top: -150px; left: -5%; opacity: 0.7; }
-    .orb-2 { width: 400px; height: 400px; background: rgba(168,85,247,0.18); top: -50px; right: 0; animation-delay: -4s; opacity: 0.6; }
-    .orb-3 { width: 300px; height: 300px; background: rgba(34,211,238,0.12); bottom: 20px; left: 40%; animation-delay: -7s; opacity: 0.5; }
+    .floating-orb-1 { width: 500px; height: 500px; background: rgba(99,102,241,0.2); top: -150px; left: -5%; opacity: 0.7; }
+    .floating-orb-2 { width: 400px; height: 400px; background: rgba(168,85,247,0.18); top: -50px; right: 0; animation-delay: -4s; opacity: 0.6; }
+    .floating-orb-3 { width: 300px; height: 300px; background: rgba(34,211,238,0.12); bottom: 20px; left: 40%; animation-delay: -7s; opacity: 0.5; }
 
     @keyframes orbFloat {
       0%   { transform: translate(0,0) scale(1); }
@@ -895,7 +959,7 @@
     </section>
 
     <!-- 3D Supported Platforms Grid -->
-    <section class="block-3d">
+    <section class="block-3d hidden-section">
       <div class="section-header">
         <span class="section-badge-3d">Platform Terhubung</span>
         <h2>Mendukung Seluruh Media Sosial</h2>
@@ -984,7 +1048,7 @@
     </section>
 
     <!-- 3D Steps -->
-    <section class="block-3d">
+    <section class="block-3d hidden-section">
       <div class="section-header">
         <span class="section-badge-3d">Mudah Digunakan</span>
         <h2>3 Langkah Praktis</h2>
@@ -1048,45 +1112,10 @@
     </div>
   </footer>
 
+<div class="floating-orb floating-orb-1"></div>
+<div class="floating-orb floating-orb-2"></div>
+<div class="floating-orb floating-orb-3"></div>
+
   <script src="app.js?v=22"></script>
-  <script>
-    // Quick platform selector from showcase cards
-    function selectPlatformQuick(platform) {
-      const btn = document.querySelector(`.platform-btn[data-platform="${platform}"]`);
-      if (btn) btn.click();
-      const input = document.getElementById('urlInput');
-      if (input) {
-        input.focus();
-        document.getElementById('toolWrapper').scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-    }
-
-    // Subtle 3D Card Tilt Effect on Desktop
-    (function init3DTilt() {
-      if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
-        const card = document.getElementById('mainTool');
-        const wrapper = document.getElementById('toolWrapper');
-        if (!card || !wrapper) return;
-
-        wrapper.addEventListener('mousemove', (e) => {
-          const rect = card.getBoundingClientRect();
-          const x = e.clientX - rect.left;
-          const y = e.clientY - rect.top;
-          const centerX = rect.width / 2;
-          const centerY = rect.height / 2;
-
-          const rotateX = ((y - centerY) / centerY) * -3.5;
-          const rotateY = ((x - centerX) / centerX) * 3.5;
-
-          card.style.transform = `perspective(1000px) rotateX(${rotateX.toFixed(2)}deg) rotateY(${rotateY.toFixed(2)}deg) translateY(-2px)`;
-        });
-
-        wrapper.addEventListener('mouseleave', () => {
-          card.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) translateY(0)';
-        });
-      }
-    })();
-  </script>
-
 </body>
 </html>
