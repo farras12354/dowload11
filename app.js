@@ -342,9 +342,14 @@ async function startDownload(e, url, label) {
 
   showNotice('Mengunduh... harap tunggu', 'info');
 
-  // Langsung arahkan browser ke URL sumber video — TIDAK lewat proxy PHP
-  // Ini menghindari masalah 0 bytes saat proxy gagal fetch YouTube/googlevideo
-  window.location.href = url;
+  try {
+    // Unduh lewat dl.php (streaming PHP) agar file besar tidak 0 bytes.
+    const dlUrl = `dl.php?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(label || 'video')}`;
+    window.location.href = dlUrl;
+  } catch (err) {
+    console.error(err);
+    showNotice('Gagal memulai unduhan.', 'error');
+  }
 
   setTimeout(() => {
     hideNotice();
