@@ -1,4 +1,4 @@
-const BASE = '/api/downloader';
+﻿const BASE = '/api/downloader';
 
 const PLATFORM_MAP = {
   tiktok:    { endpoint: 'tiktok',           label: 'TikTok' },
@@ -376,6 +376,12 @@ function startDownload(e, url, filename) {
   let safeName = String(filename || 'video.mp4').trim();
   if (!/\.[a-zA-Z0-9]{2,5}$/.test(safeName)) {
     safeName += '.mp4';
+  }
+  // Tambah timestamp supaya download kedua tidak timpa yang pertama
+  const extMatch = safeName.match(/(\.[a-zA-Z0-9]{2,5})$/);
+  if (extMatch) {
+    const ts = Date.now();
+    safeName = safeName.replace(extMatch[1], `_${ts}${extMatch[1]}`);
   }
 
   // Visual feedback pada tombol yang diklik
