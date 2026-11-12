@@ -13,6 +13,7 @@ const PLATFORM_MAP = {
 let activePlatform = 'tiktok';
 let _lastSourceUrl = '';
 let _lastEndpoint  = '';
+let _lastItems     = []; // simpan daftar item terakhir untuk re-fetch
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
@@ -162,6 +163,7 @@ function renderResult(data, platformLabel, sourceUrl, endpoint) {
   document.getElementById('resultPlatform').textContent  = platformLabel;
 
   const items = collectDownloadItems(data, title);
+  _lastItems = items; // simpan untuk re-fetch saat unduh
 
   // Video preview
   const d = data.data || data;
@@ -195,7 +197,7 @@ function renderResult(data, platformLabel, sourceUrl, endpoint) {
   if (items.length === 0) {
     list.innerHTML = `<p style="color:var(--ink2);font-size:0.875rem;text-align:center;padding:20px 0">Tidak ada tautan unduhan yang ditemukan.</p>`;
   } else {
-    items.forEach(item => list.appendChild(createDownloadItem(item)));
+    items.forEach((item, idx) => list.appendChild(createDownloadItem(item, idx)));
   }
 
   document.getElementById('result').style.display = 'block';
@@ -292,7 +294,7 @@ function collectDownloadItems(data, videoTitle = '') {
   return items;
 }
 
-function createDownloadItem({ label, badge, desc, url, isPrimary, filename }) {
+function createDownloadItem({ label, badge, desc, url, isPrimary, filename }, itemIdx) {
   if (typeof url !== 'string') return document.createElement('div');
   const cleanUrl = url.split('?')[0];
   const ext = cleanUrl.split('.').pop().toLowerCase();
@@ -321,7 +323,7 @@ function createDownloadItem({ label, badge, desc, url, isPrimary, filename }) {
       </div>
       ${desc ? `<div class="dl-desc">${esc(desc)}</div>` : ''}
     </div>
-    <button class="btn-dl ${isPrimary ? 'primary-btn' : ''}" onclick="startDownload(event, '${esc(url)}', '${esc(chosenFilename)}')">
+    <button class="btn-dl ${isPrimary ? 'primary-btn' : ''}" onclick="startDownload(event, ${itemIdx}, '${esc(chosenFilename)}')">
       ${dlSvg}
       Unduh
     </button>
@@ -365,24 +367,8 @@ function triggerDownload(targetUrl, filename) {
   }, 1000);
 }
 
-function startDownload(e, url, filename) {
+async function startDownload(e, itemIdx, filename) {
   if (e && e.preventDefault) e.preventDefault();
-
-  if (!url || !url.startsWith('http')) {
-    showNotice('Tautan unduhan tidak valid.', 'error');
-    return;
-  }
-
-  let safeName = String(filename || 'video.mp4').trim();
-  if (!/\.[a-zA-Z0-9]{2,5}$/.test(safeName)) {
-    safeName += '.mp4';
-  }
-  // Tambah timestamp supaya download kedua tidak timpa yang pertama
-  const extMatch = safeName.match(/(\.[a-zA-Z0-9]{2,5})$/);
-  if (extMatch) {
-    const ts = Date.now();
-    safeName = safeName.replace(extMatch[1], `_${ts}${extMatch[1]}`);
-  }
 
   // Visual feedback pada tombol yang diklik
   const btn = e ? (e.currentTarget || (e.target && e.target.closest('button'))) : null;
@@ -396,20 +382,45 @@ function startDownload(e, url, filename) {
         <circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle>
         <path d="M12 2a10 10 0 0 1 10 10"></path>
       </svg>
-      Mengunduh...
+      Menyiapkan...
     `;
   }
+
+  // Re-fetch URL segar dari API supaya link tidak expired
+  let url = (_lastItems[itemIdx] || {}).url || '';
+  if (_lastSourceUrl && _lastEndpoint) {
+    try {
+      showNotice('Menyiapkan unduhan...', 'info');
+      const res = await fetch(`${BASE}/${_lastEndpoint}?url=${encodeURIComponent(_lastSourceUrl)}`);
+      const data = await res.json();
+      if (data.status) {
+        const freshItems = collectDownloadItems(data);
+        if (freshItems[itemIdx] && freshItems[itemIdx].url) {
+          url = freshItems[itemIdx].url;
+          _lastItems = freshItems; // update cache
+        }
+      }
+    } catch (err) {
+      console.warn('Re-fetch gagal, pakai URL lama:', err);
+      // tetap pakai URL lama dari _lastItems
+    }
+  }
+
+  if (!url || !url.startsWith('http')) {
+    showNotice('Tautan unduhan tidak valid.', 'error');
+    if (btn && originalHtml) { btn.disabled = false; btn.style.opacity = '1'; btn.innerHTML = originalHtml; }
+    return;
+  }
+
+  let safeName = String(filename || 'video.mp4').trim();
+  if (!/\.[a-zA-Z0-9]{2,5}$/.test(safeName)) safeName += '.mp4';
 
   showNotice('Mengunduh... file otomatis tersimpan di folder Downloads.', 'info');
 
   try {
-    // 1. Jika URL Savetube (YouTube HD): langsung unduh dari CDN berkecepatan tinggi
-    // yang sudah memiliki header Content-Disposition: attachment bawaan (tanpa pindah halaman)
     if (url.includes('savetube.vip') || url.includes('savetube.me')) {
       triggerDownload(url, safeName);
     } else {
-      // 2. Untuk URL lain (GoogleVideo / TikTok / Instagram):
-      // Unduh lewat streaming /api/download agar server memasangkan header attachment
       const dlUrl = `/api/download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(safeName)}`;
       triggerDownload(dlUrl, safeName);
     }
