@@ -1,4 +1,4 @@
-﻿const BASE = '/api/downloader';
+const BASE = '/api/downloader';
 
 const PLATFORM_MAP = {
   tiktok:    { endpoint: 'tiktok',           label: 'TikTok' },
@@ -415,13 +415,21 @@ async function startDownload(e, itemIdx, filename) {
   let safeName = String(filename || 'video.mp4').trim();
   if (!/\.[a-zA-Z0-9]{2,5}$/.test(safeName)) safeName += '.mp4';
 
+  // Tambahkan timestamp unik agar unduhan kedua tidak bentrok / menimpa file pertama di galeri
+  const extMatch = safeName.match(/(\.[a-zA-Z0-9]{2,5})$/);
+  if (extMatch) {
+    const ts = Date.now().toString().slice(-4); // 4 digit timestamp terakhir
+    safeName = safeName.replace(extMatch[1], `_${ts}${extMatch[1]}`);
+  }
+
   showNotice('Mengunduh... file otomatis tersimpan di folder Downloads.', 'info');
 
   try {
     if (url.includes('savetube.vip') || url.includes('savetube.me')) {
       triggerDownload(url, safeName);
     } else {
-      const dlUrl = `/api/download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(safeName)}`;
+      // Tambah _t agar browser tidak memakai cache file lama
+      const dlUrl = `/api/download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(safeName)}&_t=${Date.now()}`;
       triggerDownload(dlUrl, safeName);
     }
   } catch (err) {
