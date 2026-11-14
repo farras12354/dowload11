@@ -382,7 +382,7 @@ async function startDownload(e, itemIdx, filename) {
         <circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle>
         <path d="M12 2a10 10 0 0 1 10 10"></path>
       </svg>
-      Menyiapkan...
+      Mengunduh...
     `;
   }
 
@@ -390,7 +390,7 @@ async function startDownload(e, itemIdx, filename) {
   let url = (_lastItems[itemIdx] || {}).url || '';
   if (_lastSourceUrl && _lastEndpoint) {
     try {
-      showNotice('Menyiapkan unduhan...', 'info');
+      showNotice('Menyiapkan tautan segar...', 'info');
       const res = await fetch(`${BASE}/${_lastEndpoint}?url=${encodeURIComponent(_lastSourceUrl)}&_t=${Date.now()}`, {
         cache: 'no-store'
       });
@@ -417,22 +417,46 @@ async function startDownload(e, itemIdx, filename) {
   let safeName = String(filename || 'video.mp4').trim();
   if (!/\.[a-zA-Z0-9]{2,5}$/.test(safeName)) safeName += '.mp4';
 
-  // Tambahkan timestamp + random unik supaya tidak pernah timpa file lain
+  // Tambahkan timestamp + random unik agar download ke-2 tidak menimpa file ke-1
   const extMatch = safeName.match(/(\.[a-zA-Z0-9]{2,5})$/);
   if (extMatch) {
-    const uid = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    const uid = Date.now().toString().slice(-4) + '_' + Math.floor(Math.random() * 900 + 100);
     safeName = safeName.replace(extMatch[1], `_${uid}${extMatch[1]}`);
   }
 
-  showNotice('Mengunduh... file otomatis tersimpan di folder Downloads.', 'info');
+  showNotice('Mengunduh video ke HP... harap tunggu sebentar.', 'info');
+
+  const dlUrl = `/api/download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(safeName)}&_t=${Date.now()}`;
 
   try {
-    // Semua download lewat /dl proxy dengan nama unik
-    const dlUrl = `/dl?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(safeName)}&_t=${Date.now()}`;
-    triggerDownload(dlUrl, safeName);
+    // Gunakan Blob Download agar browser HP mendownload data 100% penuh terlebih dahulu
+    // Ini mencegah galeri menghapus file karena download manager mendeteksi duplikat
+    const response = await fetch(dlUrl);
+    if (!response.ok) throw new Error('Status server: ' + response.status);
+    
+    const blob = await response.blob();
+    const blobUrl = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = safeName;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+
+    setTimeout(() => {
+      try {
+        if (a.parentNode) a.parentNode.removeChild(a);
+        URL.revokeObjectURL(blobUrl);
+      } catch (e) {}
+    }, 4000);
+
+    showNotice('Unduhan selesai! Video tersimpan di galeri.', 'info');
   } catch (err) {
-    console.error(err);
-    showNotice('Gagal memulai unduhan.', 'error');
+    console.warn('Blob fetch gagal, fallback ke trigger biasa:', err);
+    // Fallback jika memori HP terbatas untuk file sangat besar
+    triggerDownload(dlUrl, safeName);
+    showNotice('Mengunduh... file tersimpan di folder Downloads.', 'info');
   }
 
   setTimeout(() => {
@@ -442,7 +466,7 @@ async function startDownload(e, itemIdx, filename) {
       btn.innerHTML = originalHtml;
     }
     hideNotice();
-  }, 3500);
+  }, 4000);
 }
 
 const forceDownload = (url, label) => startDownload(null, url, label);
