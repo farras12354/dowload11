@@ -16,10 +16,7 @@ module.exports = async (req, res) => {
 
   try {
     const parsed = new URL(fileUrl);
-    // Jika URL savetube, redirect 302 langsung ke CDN agar cepat & tanpa batas waktu Vercel
-    if (parsed.hostname.includes('savetube.vip') || parsed.hostname.includes('savetube.me')) {
-      return res.redirect(302, fileUrl);
-    }
+    // Jangan redirect - tetap stream agar nama file terjaga
   } catch (err) {
     return res.status(400).send('URL tidak valid.');
   }
