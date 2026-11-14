@@ -355,18 +355,26 @@ function hideNotice() { document.getElementById('notice').style.display = 'none'
 function hideResult()  { document.getElementById('result').style.display  = 'none'; }
 
 function triggerDownload(targetUrl, filename) {
-  const a = document.createElement('a');
-  a.href = targetUrl;
-  a.download = filename || 'video.mp4';
-  a.rel = 'noopener noreferrer';
-  a.style.display = 'none';
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(() => {
-    try {
-      if (a.parentNode) a.parentNode.removeChild(a);
-    } catch (e) {}
-  }, 1000);
+  try {
+    let iframe = document.getElementById('dlFrame');
+    if (!iframe) {
+      iframe = document.createElement('iframe');
+      iframe.id = 'dlFrame';
+      iframe.style.display = 'none';
+      document.body.appendChild(iframe);
+    }
+    iframe.src = targetUrl;
+  } catch (err) {
+    const a = document.createElement('a');
+    a.href = targetUrl;
+    a.download = filename || 'video.mp4';
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      try { a.remove(); } catch (e) {}
+    }, 2000);
+  }
 }
 
 // Modal dialog konfirmasi jika mengunduh URL yang sama berulang kali
@@ -534,36 +542,11 @@ async function executeDownload(e, itemIdx, filename, isRepeat = false) {
 
   showNotice(isRepeat ? 'Mengunduh salinan video ke HP...' : 'Mengunduh video ke HP...', 'info');
 
-  const dlUrl = `/api/download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(safeName)}&_t=${Date.now()}`;
+  const dlUrl = `/api/download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(safeName)}&download_id=${Date.now()}`;
 
-  try {
-    // Gunakan Blob Download agar browser HP mendownload data 100% penuh terlebih dahulu
-    const response = await fetch(dlUrl);
-    if (!response.ok) throw new Error('Status server: ' + response.status);
-    
-    const blob = await response.blob();
-    const blobUrl = URL.createObjectURL(blob);
-
-    const a = document.createElement('a');
-    a.href = blobUrl;
-    a.download = safeName;
-    a.style.display = 'none';
-    document.body.appendChild(a);
-    a.click();
-
-    setTimeout(() => {
-      try {
-        if (a.parentNode) a.parentNode.removeChild(a);
-        URL.revokeObjectURL(blobUrl);
-      } catch (e) {}
-    }, 4000);
-
-    showNotice('Unduhan selesai! Video tersimpan di galeri.', 'info');
-  } catch (err) {
-    console.warn('Blob fetch gagal, fallback ke trigger biasa:', err);
-    triggerDownload(dlUrl, safeName);
-    showNotice('Mengunduh... file tersimpan di folder Downloads.', 'info');
-  }
+  // Gunakan download native browser/Android Download Manager agar file masuk 100% ke Galeri
+  triggerDownload(dlUrl, safeName);
+  showNotice('Unduhan dimulai! File otomatis tersimpan di galeri HP.', 'info');
 
   setTimeout(() => {
     if (btn && originalHtml) {
