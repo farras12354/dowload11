@@ -418,7 +418,7 @@ async function startDownload(e, itemIdx, filename) {
   // Tambahkan timestamp unik agar unduhan kedua tidak bentrok / menimpa file pertama di galeri
   const extMatch = safeName.match(/(\.[a-zA-Z0-9]{2,5})$/);
   if (extMatch) {
-    const ts = Date.now().toString().slice(-4); // 4 digit timestamp terakhir
+    const ts = Date.now(); // full timestamp supaya selalu unik
     safeName = safeName.replace(extMatch[1], `_${ts}${extMatch[1]}`);
   }
 
