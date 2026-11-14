@@ -237,11 +237,11 @@ function collectDownloadItems(data, videoTitle = '') {
     });
   }
 
-  // TikTok — hanya pakai dl.url (signed download), jangan sourceUrl (CDN streaming)
+  // TikTok — prioritaskan sourceUrl (TikTok CDN langsung yang 100% stabil), fallback ke dl.url
   if (Array.isArray(d.downloads)) {
     const dl = d.downloads[0];
     if (dl) {
-      const primaryUrl = dl.url;
+      const primaryUrl = dl.sourceUrl || dl.url;
       if (primaryUrl) push('Video HD', 'Tanpa watermark', 'Kualitas terbaik tanpa watermark', primaryUrl, true, `${cleanTitle}.mp4`);
     }
   }
@@ -386,15 +386,18 @@ async function startDownload(e, itemIdx, filename) {
     `;
   }
 
-  // Re-fetch URL segar dari API supaya link tidak expired
+  // Re-fetch URL segar dari API supaya link tidak expired & selalu bypass browser cache
   let url = (_lastItems[itemIdx] || {}).url || '';
   if (_lastSourceUrl && _lastEndpoint) {
     try {
       showNotice('Menyiapkan unduhan...', 'info');
-      const res = await fetch(`${BASE}/${_lastEndpoint}?url=${encodeURIComponent(_lastSourceUrl)}`);
+      const res = await fetch(`${BASE}/${_lastEndpoint}?url=${encodeURIComponent(_lastSourceUrl)}&_t=${Date.now()}`, {
+        cache: 'no-store'
+      });
       const data = await res.json();
       if (data.status) {
-        const freshItems = collectDownloadItems(data);
+        const currentTitle = document.getElementById('resultTitle')?.textContent || '';
+        const freshItems = collectDownloadItems(data, currentTitle);
         if (freshItems[itemIdx] && freshItems[itemIdx].url) {
           url = freshItems[itemIdx].url;
           _lastItems = freshItems; // update cache
@@ -402,7 +405,6 @@ async function startDownload(e, itemIdx, filename) {
       }
     } catch (err) {
       console.warn('Re-fetch gagal, pakai URL lama:', err);
-      // tetap pakai URL lama dari _lastItems
     }
   }
 
