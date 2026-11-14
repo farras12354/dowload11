@@ -415,23 +415,19 @@ async function startDownload(e, itemIdx, filename) {
   let safeName = String(filename || 'video.mp4').trim();
   if (!/\.[a-zA-Z0-9]{2,5}$/.test(safeName)) safeName += '.mp4';
 
-  // Tambahkan timestamp unik agar unduhan kedua tidak bentrok / menimpa file pertama di galeri
+  // Tambahkan timestamp + random unik supaya tidak pernah timpa file lain
   const extMatch = safeName.match(/(\.[a-zA-Z0-9]{2,5})$/);
   if (extMatch) {
-    const ts = Date.now(); // full timestamp supaya selalu unik
-    safeName = safeName.replace(extMatch[1], `_${ts}${extMatch[1]}`);
+    const uid = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    safeName = safeName.replace(extMatch[1], `_${uid}${extMatch[1]}`);
   }
 
   showNotice('Mengunduh... file otomatis tersimpan di folder Downloads.', 'info');
 
   try {
-    if (url.includes('savetube.vip') || url.includes('savetube.me')) {
-      triggerDownload(url, safeName);
-    } else {
-      // Tambah _t agar browser tidak memakai cache file lama
-      const dlUrl = `/api/download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(safeName)}&_t=${Date.now()}`;
-      triggerDownload(dlUrl, safeName);
-    }
+    // Semua download lewat /dl proxy dengan nama unik
+    const dlUrl = `/dl?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(safeName)}&_t=${Date.now()}`;
+    triggerDownload(dlUrl, safeName);
   } catch (err) {
     console.error(err);
     showNotice('Gagal memulai unduhan.', 'error');
