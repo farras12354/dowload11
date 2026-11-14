@@ -14,6 +14,8 @@ let activePlatform = 'tiktok';
 let _lastSourceUrl = '';
 let _lastEndpoint  = '';
 let _lastItems     = []; // simpan daftar item terakhir untuk re-fetch
+const _downloadHistory = new Set(); // lacak URL/file yang sudah pernah diunduh
+let _repeatCount = 0; // counter unduhan berulang
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
@@ -367,9 +369,110 @@ function triggerDownload(targetUrl, filename) {
   }, 1000);
 }
 
+// Modal dialog konfirmasi jika mengunduh URL yang sama berulang kali
+function showDownloadAgainModal(videoTitle, onConfirm) {
+  // Hapus modal lama jika ada
+  const existingModal = document.getElementById('dlConfirmModal');
+  if (existingModal) existingModal.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'dlConfirmModal';
+  modal.style.cssText = `
+    position: fixed; inset: 0; z-index: 9999;
+    background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+    animation: dlModalFadeIn 0.2s ease-out;
+  `;
+
+  const safeTitle = (videoTitle || 'Video ini').length > 40
+    ? (videoTitle || 'Video ini').slice(0, 40) + '...'
+    : (videoTitle || 'Video ini');
+
+  modal.innerHTML = `
+    <div style="
+      background: #111827; border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 20px; max-width: 400px; width: 100%; padding: 26px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.6); text-align: center; color: #fff;
+      font-family: inherit;
+    ">
+      <div style="
+        width: 56px; height: 56px; border-radius: 50%;
+        background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.3);
+        color: #818cf8; display: grid; place-items: center; margin: 0 auto 16px;
+      ">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 3v12M8 11l4 4 4-4M5 20h14"/>
+        </svg>
+      </div>
+
+      <h3 style="font-size: 1.2rem; font-weight: 700; margin-bottom: 8px; color: #f3f4f6;">
+        Unduh Video Lagi?
+      </h3>
+
+      <p style="font-size: 0.9rem; color: #9ca3af; line-height: 1.5; margin-bottom: 22px;">
+        <strong>"${esc(safeTitle)}"</strong> sudah pernah Anda unduh. Apakah Anda ingin mengunduhnya lagi?
+      </p>
+
+      <div style="display: flex; gap: 10px;">
+        <button id="dlModalCancelBtn" style="
+          flex: 1; padding: 12px 16px; border-radius: 12px;
+          border: 1px solid rgba(255, 255, 255, 0.12); background: rgba(255, 255, 255, 0.05);
+          color: #d1d5db; font-size: 0.9rem; font-weight: 600; cursor: pointer;
+        ">
+          Batal
+        </button>
+        <button id="dlModalConfirmBtn" style="
+          flex: 1; padding: 12px 16px; border-radius: 12px;
+          border: none; background: #4f46e5; color: #fff;
+          font-size: 0.9rem; font-weight: 600; cursor: pointer;
+          box-shadow: 0 4px 14px rgba(79, 70, 229, 0.4);
+        ">
+          Unduh Lagi
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  const closeModal = () => {
+    modal.style.opacity = '0';
+    modal.style.transition = 'opacity 0.15s ease-out';
+    setTimeout(() => modal.remove(), 150);
+  };
+
+  modal.querySelector('#dlModalCancelBtn').addEventListener('click', closeModal);
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeModal();
+  });
+
+  modal.querySelector('#dlModalConfirmBtn').addEventListener('click', () => {
+    closeModal();
+    if (typeof onConfirm === 'function') onConfirm();
+  });
+}
+
 async function startDownload(e, itemIdx, filename) {
   if (e && e.preventDefault) e.preventDefault();
 
+  const itemKey = `${_lastSourceUrl || ''}_${itemIdx}`;
+
+  // Cek apakah video dengan URL ini sudah pernah diunduh pada sesi ini
+  if (_downloadHistory.has(itemKey)) {
+    const videoTitle = document.getElementById('resultTitle')?.textContent || filename || '';
+    showDownloadAgainModal(videoTitle, () => {
+      _repeatCount++;
+      executeDownload(e, itemIdx, filename, true);
+    });
+    return;
+  }
+
+  // Jika pertama kali, catat ke riwayat dan unduh langsung
+  _downloadHistory.add(itemKey);
+  executeDownload(e, itemIdx, filename, false);
+}
+
+async function executeDownload(e, itemIdx, filename, isRepeat = false) {
   // Visual feedback pada tombol yang diklik
   const btn = e ? (e.currentTarget || (e.target && e.target.closest('button'))) : null;
   let originalHtml = '';
@@ -417,20 +520,24 @@ async function startDownload(e, itemIdx, filename) {
   let safeName = String(filename || 'video.mp4').trim();
   if (!/\.[a-zA-Z0-9]{2,5}$/.test(safeName)) safeName += '.mp4';
 
-  // Tambahkan timestamp + random unik agar download ke-2 tidak menimpa file ke-1
+  // Tambahkan nomor salinan unik jika diunduh berulang kali
   const extMatch = safeName.match(/(\.[a-zA-Z0-9]{2,5})$/);
   if (extMatch) {
-    const uid = Date.now().toString().slice(-4) + '_' + Math.floor(Math.random() * 900 + 100);
-    safeName = safeName.replace(extMatch[1], `_${uid}${extMatch[1]}`);
+    const ext = extMatch[1];
+    if (isRepeat) {
+      safeName = safeName.replace(ext, `_salinan(${_repeatCount})${ext}`);
+    } else {
+      const ts = Date.now().toString().slice(-4);
+      safeName = safeName.replace(ext, `_${ts}${ext}`);
+    }
   }
 
-  showNotice('Mengunduh video ke HP... harap tunggu sebentar.', 'info');
+  showNotice(isRepeat ? 'Mengunduh salinan video ke HP...' : 'Mengunduh video ke HP...', 'info');
 
   const dlUrl = `/api/download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(safeName)}&_t=${Date.now()}`;
 
   try {
     // Gunakan Blob Download agar browser HP mendownload data 100% penuh terlebih dahulu
-    // Ini mencegah galeri menghapus file karena download manager mendeteksi duplikat
     const response = await fetch(dlUrl);
     if (!response.ok) throw new Error('Status server: ' + response.status);
     
@@ -454,7 +561,6 @@ async function startDownload(e, itemIdx, filename) {
     showNotice('Unduhan selesai! Video tersimpan di galeri.', 'info');
   } catch (err) {
     console.warn('Blob fetch gagal, fallback ke trigger biasa:', err);
-    // Fallback jika memori HP terbatas untuk file sangat besar
     triggerDownload(dlUrl, safeName);
     showNotice('Mengunduh... file tersimpan di folder Downloads.', 'info');
   }
