@@ -9,6 +9,11 @@
       "source": "/dl.php",
       "destination": "/api/download",
       "permanent": false
+    },
+    {
+      "source": "/dl",
+      "destination": "/api/download",
+      "permanent": false
     }
   ],
   "rewrites": [
