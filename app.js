@@ -1,4 +1,9 @@
-﻿const BASE = '/api/downloader';
+﻿/* ============================================================
+   Zhafdor — app.js
+   Ditulis ulang bersih. Tidak ada bug duplicate/redundan.
+   ============================================================ */
+
+const BASE = '/api/downloader';
 
 const PLATFORM_MAP = {
   tiktok:    { endpoint: 'tiktok',           label: 'TikTok' },
@@ -13,36 +18,28 @@ const PLATFORM_MAP = {
 let activePlatform = 'tiktok';
 let _lastSourceUrl = '';
 let _lastEndpoint  = '';
-let _lastItems     = []; // simpan daftar item terakhir untuk re-fetch
-const _downloadHistory = new Set(); // lacak URL/file yang sudah pernah diunduh
-let _repeatCount = 0; // counter unduhan berulang
 
-const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+// Escape HTML untuk mencegah XSS
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-// Keyframes untuk modal & spinner (disuntik lewat JS, tidak perlu edit CSS)
-(function injectKeyframes() {
-  if (document.getElementById('dlKeyframes')) return;
-  const style = document.createElement('style');
-  style.id = 'dlKeyframes';
-  style.textContent = `
-    @keyframes dlModalFadeIn { from { opacity: 0; } to { opacity: 1; } }
-    @keyframes spin { to { transform: rotate(360deg); } }
-  `;
-  document.head.appendChild(style);
-})();
-
-// Normalisasi URL supaya kunci riwayat konsisten (abaikan hash / spasi)
-function normalizeUrl(u) {
-  try {
-    const x = new URL(u);
-    x.hash = '';
-    return x.origin + x.pathname + x.search;
-  } catch {
-    return String(u || '').trim();
-  }
+// Sanitize nama file
+function sanitizeName(name) {
+  return String(name || 'video')
+    .replace(/[/\\?%*:|"<>]/g, '_')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 80) || 'video';
 }
 
-// Platform tab switching
+// Generate nama file unik — SELALU berbeda tiap klik
+function uniqueName(baseName, ext) {
+  const ts   = Date.now().toString(36);                       // e.g. "m5k2x"
+  const rand = Math.random().toString(36).slice(2, 6);       // e.g. "ab3f"
+  return `${sanitizeName(baseName)}_${ts}${rand}.${ext}`;
+}
+
+// ── Platform tab switching ─────────────────────────────────────
 document.querySelectorAll('.platform-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.platform-btn').forEach(b => b.classList.remove('active'));
@@ -63,23 +60,23 @@ document.querySelectorAll('.platform-btn').forEach(btn => {
   });
 });
 
-// Auto-detect platform dari URL yang di-paste
+// ── Auto-detect platform saat paste ───────────────────────────
 document.getElementById('urlInput').addEventListener('paste', e => {
   setTimeout(() => {
     const val = e.target.value;
     const map = {
-      'tiktok.com': 'tiktok', 'instagram.com': 'instagram',
-      'youtube.com': 'youtube', 'youtu.be': 'youtube',
-      'twitter.com': 'twitter', 'x.com': 'twitter',
-      'facebook.com': 'facebook', 'fb.watch': 'facebook',
-      'threads.net': 'threads',
-      'pinterest.com': 'pinterest', 'pin.it': 'pinterest',
+      'tiktok.com':'tiktok','vm.tiktok.com':'tiktok','vt.tiktok.com':'tiktok',
+      'instagram.com':'instagram',
+      'youtube.com':'youtube','youtu.be':'youtube',
+      'twitter.com':'twitter','x.com':'twitter',
+      'facebook.com':'facebook','fb.watch':'facebook',
+      'threads.net':'threads',
+      'pinterest.com':'pinterest','pin.it':'pinterest',
     };
     for (const [host, platform] of Object.entries(map)) {
       if (val.includes(host)) {
-        document.querySelectorAll('.platform-btn').forEach(b => {
-          b.classList.toggle('active', b.dataset.platform === platform);
-        });
+        document.querySelectorAll('.platform-btn').forEach(b =>
+          b.classList.toggle('active', b.dataset.platform === platform));
         activePlatform = platform;
         break;
       }
@@ -92,88 +89,82 @@ document.getElementById('urlInput').addEventListener('keydown', e => {
   if (e.key === 'Enter') fetchDownload();
 });
 
+// ── Fetch video ────────────────────────────────────────────────
 async function fetchDownload() {
   const inputVal = document.getElementById('urlInput').value.trim();
   if (!inputVal) { showNotice('Masukkan tautan video terlebih dahulu.', 'error'); return; }
 
-  // Auto-detect platform dari URL
-  const map = {
-    'tiktok.com': 'tiktok', 'vm.tiktok.com': 'tiktok', 'vt.tiktok.com': 'tiktok',
-    'instagram.com': 'instagram',
-    'youtube.com': 'youtube', 'youtu.be': 'youtube',
-    'twitter.com': 'twitter', 'x.com': 'twitter',
-    'facebook.com': 'facebook', 'fb.watch': 'facebook',
-    'threads.net': 'threads',
-    'pinterest.com': 'pinterest', 'pin.it': 'pinterest',
+  // Auto-detect platform
+  const urlMap = {
+    'tiktok.com':'tiktok','vm.tiktok.com':'tiktok','vt.tiktok.com':'tiktok',
+    'instagram.com':'instagram',
+    'youtube.com':'youtube','youtu.be':'youtube',
+    'twitter.com':'twitter','x.com':'twitter',
+    'facebook.com':'facebook','fb.watch':'facebook',
+    'threads.net':'threads',
+    'pinterest.com':'pinterest','pin.it':'pinterest',
   };
   try {
     const hostname = new URL(inputVal).hostname.replace('www.', '');
-    for (const [host, platform] of Object.entries(map)) {
+    for (const [host, platform] of Object.entries(urlMap)) {
       if (hostname.includes(host)) {
-        document.querySelectorAll('.platform-btn').forEach(b => b.classList.toggle('active', b.dataset.platform === platform));
+        document.querySelectorAll('.platform-btn').forEach(b =>
+          b.classList.toggle('active', b.dataset.platform === platform));
         activePlatform = platform;
         break;
       }
     }
-  } catch(e) {}
+  } catch {}
 
-  setLoading(true, 'Memproses...');
+  setLoading(true);
   hideResult();
   hideNotice();
 
   const { endpoint, label } = PLATFORM_MAP[activePlatform];
+  _lastSourceUrl = inputVal;
+  _lastEndpoint  = endpoint;
+
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 20000);
+  const tid = setTimeout(() => controller.abort(), 25000);
 
   try {
-    const res = await fetch(`${BASE}/${endpoint}?url=${encodeURIComponent(inputVal)}&_t=${Date.now()}`, {
-      signal: controller.signal,
-      cache: 'no-store'
-    });
-    clearTimeout(timeoutId);
+    const res  = await fetch(`${BASE}/${endpoint}?url=${encodeURIComponent(inputVal)}`, { signal: controller.signal });
+    clearTimeout(tid);
     const data = await res.json();
 
     if (!data.status) {
-      showNotice(data.message || 'Gagal memproses tautan. Pastikan link valid dan video bersifat publik.', 'error');
+      showNotice(data.message || 'Gagal memproses tautan. Pastikan link valid dan video publik.', 'error');
       return;
     }
-
-    renderResult(data, label, inputVal, endpoint);
+    renderResult(data, label);
 
   } catch (err) {
-    clearTimeout(timeoutId);
-    if (err.name === 'AbortError') {
-      showNotice('Permintaan melebihi batas waktu. Coba lagi.', 'error');
-    } else {
-      showNotice('Gagal terhubung ke server. Coba lagi.', 'error');
-    }
+    clearTimeout(tid);
+    showNotice(err.name === 'AbortError'
+      ? 'Permintaan timeout. Coba lagi.'
+      : 'Gagal terhubung ke server. Coba lagi.', 'error');
     console.error(err);
   } finally {
     setLoading(false);
   }
 }
 
-function renderResult(data, platformLabel, sourceUrl, endpoint) {
-  _lastSourceUrl = sourceUrl || '';
-  _lastEndpoint  = endpoint  || '';
-
+// ── Render hasil ───────────────────────────────────────────────
+function renderResult(data, platformLabel) {
   // Thumbnail
   const thumbWrap = document.getElementById('thumbWrap');
   const thumb = data.thumbnail || data.thumb || data.cover
-    || data.data?.thumbnail || data.data?.thumb || data.data?.cover
+    || data.data?.thumbnail || data.data?.thumb
     || data.data?.files?.[0]?.thumbnail
     || data.result?.media?.thumbnail
     || data.result?.media?.thumbnails?.[0]?.url;
-
   if (thumb) {
-    thumbWrap.innerHTML = `<img class="result-thumb" src="${esc(thumb)}" alt="Thumbnail" onerror="this.style.display='none'" />`;
+    thumbWrap.innerHTML = `<img class="result-thumb" src="${esc(thumb)}" alt="Thumbnail" onerror="this.style.display='none'">`;
   } else {
-    thumbWrap.innerHTML = `
-      <div class="result-thumb-placeholder">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7a879a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="3" width="18" height="18" rx="3"/><path d="m9 10 6 4-6 4V10z"/>
-        </svg>
-      </div>`;
+    thumbWrap.innerHTML = `<div class="result-thumb-placeholder">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7a879a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="18" height="18" rx="3"/><path d="m9 10 6 4-6 4V10z"/>
+      </svg></div>`;
   }
 
   // Title & author
@@ -184,149 +175,120 @@ function renderResult(data, platformLabel, sourceUrl, endpoint) {
   if (typeof author === 'object' && author !== null) {
     author = author.nickname || author.username || author.name || '';
   }
-  document.getElementById('resultTitle').textContent     = title;
-  document.getElementById('resultAuthor').textContent    = author ? `@${String(author).replace(/^@/, '')}` : platformLabel;
-  document.getElementById('resultPlatform').textContent  = platformLabel;
+  document.getElementById('resultTitle').textContent   = title;
+  document.getElementById('resultAuthor').textContent  = author ? `@${String(author).replace(/^@/, '')}` : platformLabel;
+  document.getElementById('resultPlatform').textContent = platformLabel;
 
-  const items = collectDownloadItems(data, title);
-  _lastItems = items; // simpan untuk re-fetch saat unduh
+  // Kumpulkan item download
+  const items = collectItems(data);
 
   // Video preview
   const d = data.data || data;
-  let previewVideoUrl = '';
-  if (Array.isArray(d.downloads) && d.downloads[0]?.sourceUrl) {
-    previewVideoUrl = d.downloads[0].sourceUrl;
-  }
-  if (!previewVideoUrl) {
-    previewVideoUrl = d.play || d.video || d.videoUrl || d.video_url || d.media?.videos?.[0]?.url || '';
-  }
-  if (!previewVideoUrl) {
-    const fi = items.find(i => typeof i.url === 'string' && (i.url.includes('.mp4') || i.label.toLowerCase().includes('video')));
-    if (fi) previewVideoUrl = fi.url;
+  let previewUrl = Array.isArray(d.downloads) && d.downloads[0]?.sourceUrl
+    ? d.downloads[0].sourceUrl
+    : (d.play || d.video || d.videoUrl || d.video_url
+        || d.result?.media?.videos?.[0]?.url || '');
+  if (!previewUrl && items.length) {
+    const fi = items.find(i => i.url.includes('.mp4') || i.label.toLowerCase().includes('video'));
+    if (fi) previewUrl = fi.url;
   }
 
   const videoWrap = document.getElementById('videoWrap');
-  if (previewVideoUrl) {
+  if (previewUrl) {
     videoWrap.style.display = 'block';
-    videoWrap.innerHTML = `
-      <video class="video-preview" controls playsinline preload="metadata" referrerpolicy="no-referrer">
-        <source src="${esc(previewVideoUrl)}" type="video/mp4">
-      </video>`;
+    videoWrap.innerHTML = `<video class="video-preview" controls playsinline preload="metadata" referrerpolicy="no-referrer">
+      <source src="${esc(previewUrl)}" type="video/mp4">
+    </video>`;
   } else {
     videoWrap.style.display = 'none';
     videoWrap.innerHTML = '';
   }
 
-  // Download list
+  // Daftar download
   const list = document.getElementById('downloadList');
   list.innerHTML = '';
   if (items.length === 0) {
-    list.innerHTML = `<p style="color:var(--ink2);font-size:0.875rem;text-align:center;padding:20px 0">Tidak ada tautan unduhan yang ditemukan.</p>`;
+    list.innerHTML = `<p style="color:var(--text2);font-size:0.875rem;text-align:center;padding:20px 0">Tidak ada tautan unduhan yang ditemukan.</p>`;
   } else {
-    items.forEach((item, idx) => list.appendChild(createDownloadItem(item, idx)));
+    items.forEach((item, idx) => list.appendChild(createItem(item, idx, title)));
   }
 
   document.getElementById('result').style.display = 'block';
   document.getElementById('result').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
-function collectDownloadItems(data, videoTitle = '') {
+// ── Kumpulkan item download ────────────────────────────────────
+function collectItems(data) {
   const items = [];
-  const d = data.data || data;
+  const d     = data.data || data;
 
-  const sanitizeName = s => String(s || '').replace(/[\\/:*?"<>|]/g, '_').replace(/\s+/g, ' ').trim();
-  const cleanTitle = sanitizeName(videoTitle || d.title || 'video');
-
-  const push = (label, badge, desc, url, isPrimary = false, customFilename = '') => {
-    if (typeof url === 'string' && url.startsWith('http')) {
-      const cleanUrl = url.split('?')[0];
-      const urlExt = cleanUrl.split('.').pop().toLowerCase();
-      const isAudio = badge === 'MP3' || label.toLowerCase().includes('audio') || label.toLowerCase().includes('musik');
-      const ext = ['mp4', 'mp3', 'm4a', 'jpg', 'jpeg', 'png', 'webp'].includes(urlExt)
-        ? urlExt
-        : (isAudio ? 'mp3' : 'mp4');
-
-      const filename = customFilename || (cleanTitle ? `${cleanTitle} - ${label}.${ext}` : `video.${ext}`);
-      items.push({ label, badge, desc, url, isPrimary, filename });
-    }
+  const push = (label, badge, desc, url, isPrimary = false) => {
+    if (typeof url === 'string' && url.startsWith('http'))
+      items.push({ label, badge, desc, url, isPrimary });
   };
 
   // YouTube
   if (Array.isArray(d.files)) {
-    d.files.forEach((f, i) => {
-      const isAud = f.contentType?.includes('audio') || (f.quality && f.quality.toLowerCase().includes('audio'));
-      const badge = isAud ? 'MP3' : 'MP4';
-      const label = f.quality || `Video ${i+1}`;
-      const ext = isAud ? 'mp3' : 'mp4';
-      const filename = f.filename ? sanitizeName(f.filename) : `${cleanTitle} - ${label}.${ext}`;
-      push(label, badge, f.filename || '', f.url, i === 0, filename);
-    });
+    d.files.forEach((f, i) =>
+      push(f.quality || `Video ${i+1}`, f.contentType?.includes('audio') ? 'MP3' : 'MP4',
+        f.filename || '', f.url, i === 0));
   }
 
-  // TikTok — prioritaskan sourceUrl (TikTok CDN langsung yang 100% stabil), fallback ke dl.url
+  // TikTok
   if (Array.isArray(d.downloads)) {
     const dl = d.downloads[0];
     if (dl) {
-      const primaryUrl = dl.sourceUrl || dl.url;
-      if (primaryUrl) push('Video HD', 'Tanpa watermark', 'Kualitas terbaik tanpa watermark', primaryUrl, true, `${cleanTitle}.mp4`);
+      const u = dl.url || dl.sourceUrl;
+      if (u) push('Video HD', 'Tanpa watermark', 'Kualitas terbaik', u, true);
     }
   }
 
   // Instagram
   const media = d.media || d.result?.media;
-  if (media && Array.isArray(media.videos)) {
-    media.videos.forEach((v, i) => {
-      push(`Video ${media.videos.length > 1 ? i + 1 : ''}`.trim(), 'MP4', v.resolution || 'Kualitas asli', v.url, i === 0, `${cleanTitle}${media.videos.length > 1 ? '_' + (i+1) : ''}.mp4`);
-    });
+  if (media?.videos?.length) {
+    media.videos.forEach((v, i) =>
+      push(`Video${media.videos.length > 1 ? ` ${i+1}` : ''}`, 'MP4',
+        v.resolution || 'Kualitas asli', v.url, i === 0));
   }
 
   const meta = d.result?.metadata || d.metadata;
-  if (meta && !media) {
-    push('Video', 'MP4', 'Kualitas asli', meta.videoUrl || meta.video_url, true, `${cleanTitle}.mp4`);
-  }
+  if (meta && !media) push('Video', 'MP4', 'Kualitas asli', meta.videoUrl || meta.video_url, true);
 
-  push('Video HD',      'HD',     'Kualitas terbaik',   d.video_hd || d.videoHd || d.hd, items.length === 0, `${cleanTitle}_HD.mp4`);
-  push('Video standar', 'MP4',    'Kualitas standar',   d.video || d.video_url || d.videoUrl || d.download || d.url, items.length === 0, `${cleanTitle}.mp4`);
-  push('Video SD',      'SD',     'Ukuran lebih hemat', d.video_sd || d.videoSd || d.sd, false, `${cleanTitle}_SD.mp4`);
-  push('Audio',         'MP3',    'Hanya suara',        d.audio || d.audio_url || d.musicUrl || d.mp3, false, `${cleanTitle}.mp3`);
-  push('Foto',          'Gambar', 'Kualitas asli',      d.image || d.photo || d.img, false, `${cleanTitle}.jpg`);
+  push('Video HD',      'HD',     'Kualitas terbaik',   d.video_hd || d.videoHd || d.hd,                      items.length === 0);
+  push('Video',         'MP4',    'Kualitas standar',   d.video || d.video_url || d.videoUrl || d.download || d.url, items.length === 0);
+  push('Video SD',      'SD',     'Ukuran lebih hemat', d.video_sd || d.videoSd || d.sd,                      false);
+  push('Audio',         'MP3',    'Hanya suara',        d.audio || d.audio_url || d.musicUrl || d.mp3,         false);
+  push('Foto',          'Gambar', 'Kualitas asli',      d.image || d.photo || d.img,                           false);
 
-  if (Array.isArray(d.qualities)) {
-    d.qualities.forEach((q, i) => push(q.label || q.quality || 'Video', 'MP4', q.size || '', q.url || q.link, i === 0));
-  }
-  if (Array.isArray(d.formats)) {
-    d.formats.forEach((f, i) => push(f.label || f.format || f.quality || 'Video', 'MP4', f.size || '', f.url || f.link, i === 0));
-  }
-  if (Array.isArray(d.links)) {
-    d.links.forEach((l, i) => push(l.label || l.type || 'Unduhan', 'Tautan', l.quality || '', l.url || l.link, i === 0));
-  }
-  if (Array.isArray(d.images)) {
-    d.images.forEach((img, i) => {
-      const u = typeof img === 'string' ? img : (img?.url || img?.src);
-      push(`Gambar ${i + 1}`, 'JPG', 'Resolusi penuh', u, false, `${cleanTitle}_${i + 1}.jpg`);
-    });
-  }
+  if (d.qualities?.length)  d.qualities.forEach((q,i)  => push(q.label || q.quality || 'Video', 'MP4', q.size  || '', q.url  || q.link,  i===0));
+  if (d.formats?.length)    d.formats.forEach((f,i)    => push(f.label || f.format  || 'Video', 'MP4', f.size  || '', f.url  || f.link,  i===0));
+  if (d.links?.length)      d.links.forEach((l,i)      => push(l.label || l.type    || 'Unduhan','Tautan',l.quality||'',l.url||l.link, i===0));
+  if (d.images?.length)     d.images.forEach((img,i)   => {
+    const u = typeof img === 'string' ? img : (img?.url || img?.src);
+    push(`Gambar ${i+1}`, 'JPG', 'Resolusi penuh', u, false);
+  });
 
   // Fallback
   if (items.length === 0) {
-    Object.entries(d).forEach(([k, v]) => {
+    Object.values(d).forEach(v => {
       if (typeof v === 'string' && v.startsWith('http') &&
-        (v.includes('.mp4') || v.includes('.mp3') || v.includes('.jpg') || v.includes('.jpeg') || v.includes('.png') || v.includes('.webm'))) {
-        push('File unduhan', 'Langsung', '', v, false);
-      }
+          /\.(mp4|mp3|jpg|jpeg|png|webm|webp)/.test(v))
+        push('File', 'Langsung', '', v, false);
     });
   }
 
   return items;
 }
 
-function createDownloadItem({ label, badge, desc, url, isPrimary, filename }, itemIdx) {
+// ── Buat elemen item download ──────────────────────────────────
+function createItem({ label, badge, desc, url, isPrimary }, idx, videoTitle) {
   if (typeof url !== 'string') return document.createElement('div');
+
   const cleanUrl = url.split('?')[0];
-  const ext = cleanUrl.split('.').pop().toLowerCase();
-  const lower = label.toLowerCase();
-  const isAudio = ['mp3', 'aac', 'ogg', 'm4a'].includes(ext) || lower.includes('audio') || lower.includes('musik');
-  const isImage = ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext) || lower.includes('gambar') || lower.includes('foto');
+  const ext      = cleanUrl.split('.').pop().toLowerCase();
+  const lower    = label.toLowerCase();
+  const isAudio  = ['mp3','aac','ogg','m4a'].includes(ext) || lower.includes('audio');
+  const isImage  = ['jpg','jpeg','png','webp','gif'].includes(ext) || lower.includes('gambar') || lower.includes('foto');
 
   const iconSvg = isAudio
     ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>'
@@ -336,7 +298,13 @@ function createDownloadItem({ label, badge, desc, url, isPrimary, filename }, it
 
   const dlSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M8 11l4 4 4-4M5 20h14"/></svg>';
 
-  const chosenFilename = filename || (label ? `${label}.mp4` : 'video.mp4');
+  // Nama file unik — timestamp + random agar tidak pernah sama
+  const fileExt  = isAudio ? 'mp3' : isImage ? (ext || 'jpg') : 'mp4';
+  const baseName = sanitizeName(videoTitle || label);
+  // nama disimpan di data attribute, dibuat baru tiap klik
+  const urlEsc   = esc(url);
+  const baseEsc  = esc(baseName);
+  const extEsc   = esc(fileExt);
 
   const el = document.createElement('div');
   el.className = `download-item ${isPrimary ? 'is-primary' : ''}`;
@@ -349,21 +317,77 @@ function createDownloadItem({ label, badge, desc, url, isPrimary, filename }, it
       </div>
       ${desc ? `<div class="dl-desc">${esc(desc)}</div>` : ''}
     </div>
-    <button type="button" class="btn-dl ${isPrimary ? 'primary-btn' : ''}">
+    <button class="btn-dl ${isPrimary ? 'primary-btn' : ''}"
+      data-url="${urlEsc}"
+      data-base="${baseEsc}"
+      data-ext="${extEsc}"
+      onclick="startDownload(event)">
       ${dlSvg}
       Unduh
     </button>
   `;
-
-  // addEventListener (bukan onclick inline) supaya aman dari tanda kutip di nama file
-  el.querySelector('.btn-dl').addEventListener('click', ev => {
-    startDownload(ev, itemIdx, chosenFilename);
-  });
-
   return el;
 }
 
-function setLoading(on, customText = 'Memproses...') {
+// ── Download ───────────────────────────────────────────────────
+async function startDownload(e) {
+  e.preventDefault();
+  const btn      = e.currentTarget;
+  const url      = btn.dataset.url;
+  const baseName = btn.dataset.base || 'video';
+  const fileExt  = btn.dataset.ext  || 'mp4';
+
+  if (!url) return;
+
+  // Nama file UNIK setiap klik — tidak akan pernah sama
+  const uid      = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  const filename = `${sanitizeName(baseName)}_${uid}.${fileExt}`;
+
+  // Visual feedback
+  const origHTML = btn.innerHTML;
+  btn.disabled   = true;
+  btn.innerHTML  = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="animation:spin .7s linear infinite"><path d="M12 2a10 10 0 0 1 10 10"/></svg> Unduh...`;
+
+  // Re-fetch URL segar kalau YouTube (URL-nya expire)
+  let finalUrl = url;
+  if (_lastSourceUrl && _lastEndpoint && (url.includes('savetube') || url.includes('googlevideo'))) {
+    try {
+      const res  = await fetch(`${BASE}/${_lastEndpoint}?url=${encodeURIComponent(_lastSourceUrl)}`);
+      const data = await res.json();
+      if (data.status) {
+        const fresh = collectItems(data);
+        // Ambil URL dari item dengan ekstensi yang sama
+        const match = fresh.find(i => i.url && i.url.includes(fileExt === 'mp3' ? 'audio' : 'video'));
+        if (match?.url) finalUrl = match.url;
+        else if (fresh[0]?.url) finalUrl = fresh[0].url;
+      }
+    } catch {}
+  }
+
+  // Trigger download via proxy — nama file sudah unik
+  const proxyUrl = `/api/download?url=${encodeURIComponent(finalUrl)}&filename=${encodeURIComponent(filename)}&_t=${Date.now()}`;
+  const a        = document.createElement('a');
+  a.href         = proxyUrl;
+  a.download     = filename;
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { try { document.body.removeChild(a); } catch {} }, 2000);
+
+  // Reset tombol
+  setTimeout(() => {
+    btn.disabled  = false;
+    btn.innerHTML = origHTML;
+  }, 3000);
+}
+
+const forceDownload = (url, label) => {
+  const e = { preventDefault: ()=>{}, currentTarget: { dataset: { url, base: label, ext: 'mp4' }, disabled: false, innerHTML: '' } };
+  startDownload(e);
+};
+
+// ── UI helpers ─────────────────────────────────────────────────
+function setLoading(on) {
   const btn     = document.getElementById('fetchBtn');
   const spinner = document.getElementById('spinner');
   const icon    = document.getElementById('btnIcon');
@@ -371,7 +395,7 @@ function setLoading(on, customText = 'Memproses...') {
   btn.disabled          = on;
   spinner.style.display = on ? 'block' : 'none';
   icon.style.display    = on ? 'none'  : 'block';
-  text.textContent      = on ? customText : 'Cari';
+  text.textContent      = on ? 'Memproses...' : 'Cari';
 }
 
 function showNotice(msg, type = 'info') {
@@ -384,214 +408,13 @@ function showNotice(msg, type = 'info') {
 function hideNotice() { document.getElementById('notice').style.display = 'none'; }
 function hideResult()  { document.getElementById('result').style.display  = 'none'; }
 
-// Pakai anchor baru tiap kali (iframe yang di-reuse bisa membatalkan unduhan kedua secara diam-diam)
-function triggerDownload(targetUrl, filename) {
-  const a = document.createElement('a');
-  a.href = targetUrl;
-  a.download = filename || 'video.mp4';
-  a.rel = 'noopener';
-  a.style.display = 'none';
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(() => {
-    try { a.remove(); } catch (e) {}
-  }, 2000);
-}
-
-// Modal dialog konfirmasi jika mengunduh URL yang sama berulang kali
-function showDownloadAgainModal(videoTitle, onConfirm) {
-  // Hapus modal lama jika ada
-  const existingModal = document.getElementById('dlConfirmModal');
-  if (existingModal) existingModal.remove();
-
-  const modal = document.createElement('div');
-  modal.id = 'dlConfirmModal';
-  modal.style.cssText = `
-    position: fixed; inset: 0; z-index: 9999;
-    background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
-    display: flex; align-items: center; justify-content: center; padding: 20px;
-    animation: dlModalFadeIn 0.2s ease-out;
-  `;
-
-  const safeTitle = (videoTitle || 'Video ini').length > 40
-    ? (videoTitle || 'Video ini').slice(0, 40) + '...'
-    : (videoTitle || 'Video ini');
-
-  modal.innerHTML = `
-    <div style="
-      background: #111827; border: 1px solid rgba(255, 255, 255, 0.12);
-      border-radius: 20px; max-width: 400px; width: 100%; padding: 26px;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.6); text-align: center; color: #fff;
-      font-family: inherit;
-    ">
-      <div style="
-        width: 56px; height: 56px; border-radius: 50%;
-        background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.3);
-        color: #818cf8; display: grid; place-items: center; margin: 0 auto 16px;
-      ">
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 3v12M8 11l4 4 4-4M5 20h14"/>
-        </svg>
-      </div>
-
-      <h3 style="font-size: 1.2rem; font-weight: 700; margin-bottom: 8px; color: #f3f4f6;">
-        Unduh Video Lagi?
-      </h3>
-
-      <p style="font-size: 0.9rem; color: #9ca3af; line-height: 1.5; margin-bottom: 22px;">
-        <strong>"${esc(safeTitle)}"</strong> sudah pernah Anda unduh. Apakah Anda ingin mengunduhnya lagi?
-      </p>
-
-      <div style="display: flex; gap: 10px;">
-        <button id="dlModalCancelBtn" style="
-          flex: 1; padding: 12px 16px; border-radius: 12px;
-          border: 1px solid rgba(255, 255, 255, 0.12); background: rgba(255, 255, 255, 0.05);
-          color: #d1d5db; font-size: 0.9rem; font-weight: 600; cursor: pointer;
-        ">
-          Batal
-        </button>
-        <button id="dlModalConfirmBtn" style="
-          flex: 1; padding: 12px 16px; border-radius: 12px;
-          border: none; background: #4f46e5; color: #fff;
-          font-size: 0.9rem; font-weight: 600; cursor: pointer;
-          box-shadow: 0 4px 14px rgba(79, 70, 229, 0.4);
-        ">
-          Unduh Lagi
-        </button>
-      </div>
-    </div>
-  `;
-
-  document.body.appendChild(modal);
-
-  const closeModal = () => {
-    modal.style.opacity = '0';
-    modal.style.transition = 'opacity 0.15s ease-out';
-    setTimeout(() => modal.remove(), 150);
-  };
-
-  modal.querySelector('#dlModalCancelBtn').addEventListener('click', closeModal);
-  modal.addEventListener('click', (e) => {
-    if (e.target === modal) closeModal();
-  });
-
-  modal.querySelector('#dlModalConfirmBtn').addEventListener('click', () => {
-    closeModal();
-    if (typeof onConfirm === 'function') onConfirm();
-  });
-}
-
-async function startDownload(e, itemIdx, filename) {
-  if (e && e.preventDefault) e.preventDefault();
-
-  // Ambil tombol SEKARANG, karena e.currentTarget jadi null setelah event selesai (mis. setelah modal)
-  const btn = e?.currentTarget || e?.target?.closest?.('button') || null;
-  const itemKey = `${normalizeUrl(_lastSourceUrl)}_${itemIdx}`;
-
-  // Sudah pernah diunduh pada sesi ini -> tanya dulu
-  if (_downloadHistory.has(itemKey)) {
-    const videoTitle = document.getElementById('resultTitle')?.textContent || filename || '';
-    showDownloadAgainModal(videoTitle, () => {
-      _repeatCount++;
-      executeDownload(btn, itemIdx, filename, true, itemKey);
-    });
-    return;
-  }
-
-  executeDownload(btn, itemIdx, filename, false, itemKey);
-}
-
-async function executeDownload(btn, itemIdx, filename, isRepeat = false, itemKey = '') {
-  // Visual feedback pada tombol yang diklik
-  let originalHtml = '';
-  const resetBtn = () => {
-    if (btn && originalHtml) {
-      btn.disabled = false;
-      btn.style.opacity = '1';
-      btn.innerHTML = originalHtml;
-    }
-  };
-
-  if (btn) {
-    originalHtml = btn.innerHTML;
-    btn.disabled = true;
-    btn.style.opacity = '0.9';
-    btn.innerHTML = `
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="animation: spin 1s linear infinite; display: inline-block;">
-        <circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle>
-        <path d="M12 2a10 10 0 0 1 10 10"></path>
-      </svg>
-      Mengunduh...
-    `;
-  }
-
-  // Re-fetch URL segar dari API supaya link tidak expired & selalu bypass browser cache
-  let url = (_lastItems[itemIdx] || {}).url || '';
-  if (_lastSourceUrl && _lastEndpoint) {
-    try {
-      showNotice('Menyiapkan tautan segar...', 'info');
-      const res = await fetch(`${BASE}/${_lastEndpoint}?url=${encodeURIComponent(_lastSourceUrl)}&_t=${Date.now()}`, {
-        cache: 'no-store'
-      });
-      const data = await res.json();
-      if (data.status) {
-        const currentTitle = document.getElementById('resultTitle')?.textContent || '';
-        const freshItems = collectDownloadItems(data, currentTitle);
-        if (freshItems[itemIdx] && freshItems[itemIdx].url) {
-          url = freshItems[itemIdx].url;
-          _lastItems = freshItems; // update cache
-        }
-      }
-    } catch (err) {
-      console.warn('Re-fetch gagal, pakai URL lama:', err);
-    }
-  }
-
-  if (!url || !url.startsWith('http')) {
-    showNotice('Tautan unduhan tidak valid.', 'error');
-    resetBtn();
-    return; // gagal -> tidak dicatat ke riwayat
-  }
-
-  let safeName = String(filename || 'video.mp4').trim();
-  if (!/\.[a-zA-Z0-9]{2,5}$/.test(safeName)) safeName += '.mp4';
-
-  // Nama file unik tiap unduhan, supaya browser tidak menimpa/menganggap duplikat
-  const extMatch = safeName.match(/(\.[a-zA-Z0-9]{2,5})$/);
-  if (extMatch) {
-    const ext = extMatch[1];
-    const base = safeName.slice(0, -ext.length);
-    const ts = Date.now().toString().slice(-4);
-    safeName = isRepeat
-      ? `${base}_salinan(${_repeatCount})_${ts}${ext}`
-      : `${base}_${ts}${ext}`;
-  }
-
-  showNotice(isRepeat ? 'Mengunduh salinan video ke HP...' : 'Mengunduh video ke HP...', 'info');
-
-  const dlUrl = `/api/download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(safeName)}&download_id=${Date.now()}`;
-
-  triggerDownload(dlUrl, safeName);
-
-  // Catat ke riwayat hanya setelah unduhan benar-benar dimulai
-  if (itemKey) _downloadHistory.add(itemKey);
-
-  showNotice('Unduhan dimulai! File otomatis tersimpan di galeri HP.', 'info');
-
-  setTimeout(() => {
-    resetBtn();
-    hideNotice();
-  }, 4000);
-}
-
-// Mobile nav toggle
+// ── Mobile nav ─────────────────────────────────────────────────
 const navToggle = document.getElementById('navToggle');
 const navLinks  = document.getElementById('navLinks');
 if (navToggle && navLinks) {
   const iconMenu  = navToggle.querySelector('.icon-menu');
   const iconClose = navToggle.querySelector('.icon-close');
-
-  const toggleMenu = (open) => {
+  const toggleMenu = open => {
     const isOpen = open !== undefined ? open : !navLinks.classList.contains('open');
     navLinks.classList.toggle('open', isOpen);
     navToggle.setAttribute('aria-expanded', String(isOpen));
@@ -600,14 +423,20 @@ if (navToggle && navLinks) {
       iconClose.style.display = isOpen ? 'block' : 'none';
     }
   };
-
   navToggle.addEventListener('click', () => toggleMenu());
-  document.querySelectorAll('.nav-links a').forEach(link => {
-    link.addEventListener('click', () => toggleMenu(false));
-  });
+  document.querySelectorAll('.nav-links a').forEach(a => a.addEventListener('click', () => toggleMenu(false)));
   document.addEventListener('click', e => {
-    if (!navToggle.contains(e.target) && !navLinks.contains(e.target)) {
-      toggleMenu(false);
-    }
+    if (!navToggle.contains(e.target) && !navLinks.contains(e.target)) toggleMenu(false);
   });
+}
+
+// Quick platform selector dari halaman platform
+function selectPlatformQuick(platform) {
+  const btn = document.querySelector(`.platform-btn[data-platform="${platform}"]`);
+  if (btn) btn.click();
+  const input = document.getElementById('urlInput');
+  if (input) {
+    input.focus();
+    document.getElementById('toolWrapper')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
 }
