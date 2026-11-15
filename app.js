@@ -1,4 +1,4 @@
-const BASE = '/api/downloader';
+﻿const BASE = '/api/downloader';
 
 const PLATFORM_MAP = {
   tiktok:    { endpoint: 'tiktok',           label: 'TikTok' },
@@ -18,6 +18,29 @@ const _downloadHistory = new Set(); // lacak URL/file yang sudah pernah diunduh
 let _repeatCount = 0; // counter unduhan berulang
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+// Keyframes untuk modal & spinner (disuntik lewat JS, tidak perlu edit CSS)
+(function injectKeyframes() {
+  if (document.getElementById('dlKeyframes')) return;
+  const style = document.createElement('style');
+  style.id = 'dlKeyframes';
+  style.textContent = `
+    @keyframes dlModalFadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  `;
+  document.head.appendChild(style);
+})();
+
+// Normalisasi URL supaya kunci riwayat konsisten (abaikan hash / spasi)
+function normalizeUrl(u) {
+  try {
+    const x = new URL(u);
+    x.hash = '';
+    return x.origin + x.pathname + x.search;
+  } catch {
+    return String(u || '').trim();
+  }
+}
 
 // Platform tab switching
 document.querySelectorAll('.platform-btn').forEach(btn => {
@@ -103,8 +126,9 @@ async function fetchDownload() {
   const timeoutId = setTimeout(() => controller.abort(), 20000);
 
   try {
-    const res = await fetch(`${BASE}/${endpoint}?url=${encodeURIComponent(inputVal)}`, {
-      signal: controller.signal
+    const res = await fetch(`${BASE}/${endpoint}?url=${encodeURIComponent(inputVal)}&_t=${Date.now()}`, {
+      signal: controller.signal,
+      cache: 'no-store'
     });
     clearTimeout(timeoutId);
     const data = await res.json();
@@ -325,11 +349,17 @@ function createDownloadItem({ label, badge, desc, url, isPrimary, filename }, it
       </div>
       ${desc ? `<div class="dl-desc">${esc(desc)}</div>` : ''}
     </div>
-    <button class="btn-dl ${isPrimary ? 'primary-btn' : ''}" onclick="startDownload(event, ${itemIdx}, '${esc(chosenFilename)}')">
+    <button type="button" class="btn-dl ${isPrimary ? 'primary-btn' : ''}">
       ${dlSvg}
       Unduh
     </button>
   `;
+
+  // addEventListener (bukan onclick inline) supaya aman dari tanda kutip di nama file
+  el.querySelector('.btn-dl').addEventListener('click', ev => {
+    startDownload(ev, itemIdx, chosenFilename);
+  });
+
   return el;
 }
 
@@ -354,27 +384,18 @@ function showNotice(msg, type = 'info') {
 function hideNotice() { document.getElementById('notice').style.display = 'none'; }
 function hideResult()  { document.getElementById('result').style.display  = 'none'; }
 
+// Pakai anchor baru tiap kali (iframe yang di-reuse bisa membatalkan unduhan kedua secara diam-diam)
 function triggerDownload(targetUrl, filename) {
-  try {
-    let iframe = document.getElementById('dlFrame');
-    if (!iframe) {
-      iframe = document.createElement('iframe');
-      iframe.id = 'dlFrame';
-      iframe.style.display = 'none';
-      document.body.appendChild(iframe);
-    }
-    iframe.src = targetUrl;
-  } catch (err) {
-    const a = document.createElement('a');
-    a.href = targetUrl;
-    a.download = filename || 'video.mp4';
-    a.style.display = 'none';
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => {
-      try { a.remove(); } catch (e) {}
-    }, 2000);
-  }
+  const a = document.createElement('a');
+  a.href = targetUrl;
+  a.download = filename || 'video.mp4';
+  a.rel = 'noopener';
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    try { a.remove(); } catch (e) {}
+  }, 2000);
 }
 
 // Modal dialog konfirmasi jika mengunduh URL yang sama berulang kali
@@ -463,27 +484,34 @@ function showDownloadAgainModal(videoTitle, onConfirm) {
 async function startDownload(e, itemIdx, filename) {
   if (e && e.preventDefault) e.preventDefault();
 
-  const itemKey = `${_lastSourceUrl || ''}_${itemIdx}`;
+  // Ambil tombol SEKARANG, karena e.currentTarget jadi null setelah event selesai (mis. setelah modal)
+  const btn = e?.currentTarget || e?.target?.closest?.('button') || null;
+  const itemKey = `${normalizeUrl(_lastSourceUrl)}_${itemIdx}`;
 
-  // Cek apakah video dengan URL ini sudah pernah diunduh pada sesi ini
+  // Sudah pernah diunduh pada sesi ini -> tanya dulu
   if (_downloadHistory.has(itemKey)) {
     const videoTitle = document.getElementById('resultTitle')?.textContent || filename || '';
     showDownloadAgainModal(videoTitle, () => {
       _repeatCount++;
-      executeDownload(e, itemIdx, filename, true);
+      executeDownload(btn, itemIdx, filename, true, itemKey);
     });
     return;
   }
 
-  // Jika pertama kali, catat ke riwayat dan unduh langsung
-  _downloadHistory.add(itemKey);
-  executeDownload(e, itemIdx, filename, false);
+  executeDownload(btn, itemIdx, filename, false, itemKey);
 }
 
-async function executeDownload(e, itemIdx, filename, isRepeat = false) {
+async function executeDownload(btn, itemIdx, filename, isRepeat = false, itemKey = '') {
   // Visual feedback pada tombol yang diklik
-  const btn = e ? (e.currentTarget || (e.target && e.target.closest('button'))) : null;
   let originalHtml = '';
+  const resetBtn = () => {
+    if (btn && originalHtml) {
+      btn.disabled = false;
+      btn.style.opacity = '1';
+      btn.innerHTML = originalHtml;
+    }
+  };
+
   if (btn) {
     originalHtml = btn.innerHTML;
     btn.disabled = true;
@@ -521,44 +549,40 @@ async function executeDownload(e, itemIdx, filename, isRepeat = false) {
 
   if (!url || !url.startsWith('http')) {
     showNotice('Tautan unduhan tidak valid.', 'error');
-    if (btn && originalHtml) { btn.disabled = false; btn.style.opacity = '1'; btn.innerHTML = originalHtml; }
-    return;
+    resetBtn();
+    return; // gagal -> tidak dicatat ke riwayat
   }
 
   let safeName = String(filename || 'video.mp4').trim();
   if (!/\.[a-zA-Z0-9]{2,5}$/.test(safeName)) safeName += '.mp4';
 
-  // Tambahkan nomor salinan unik jika diunduh berulang kali
+  // Nama file unik tiap unduhan, supaya browser tidak menimpa/menganggap duplikat
   const extMatch = safeName.match(/(\.[a-zA-Z0-9]{2,5})$/);
   if (extMatch) {
     const ext = extMatch[1];
-    if (isRepeat) {
-      safeName = safeName.replace(ext, `_salinan(${_repeatCount})${ext}`);
-    } else {
-      const ts = Date.now().toString().slice(-4);
-      safeName = safeName.replace(ext, `_${ts}${ext}`);
-    }
+    const base = safeName.slice(0, -ext.length);
+    const ts = Date.now().toString().slice(-4);
+    safeName = isRepeat
+      ? `${base}_salinan(${_repeatCount})_${ts}${ext}`
+      : `${base}_${ts}${ext}`;
   }
 
   showNotice(isRepeat ? 'Mengunduh salinan video ke HP...' : 'Mengunduh video ke HP...', 'info');
 
   const dlUrl = `/api/download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(safeName)}&download_id=${Date.now()}`;
 
-  // Gunakan download native browser/Android Download Manager agar file masuk 100% ke Galeri
   triggerDownload(dlUrl, safeName);
+
+  // Catat ke riwayat hanya setelah unduhan benar-benar dimulai
+  if (itemKey) _downloadHistory.add(itemKey);
+
   showNotice('Unduhan dimulai! File otomatis tersimpan di galeri HP.', 'info');
 
   setTimeout(() => {
-    if (btn && originalHtml) {
-      btn.disabled = false;
-      btn.style.opacity = '1';
-      btn.innerHTML = originalHtml;
-    }
+    resetBtn();
     hideNotice();
   }, 4000);
 }
-
-const forceDownload = (url, label) => startDownload(null, url, label);
 
 // Mobile nav toggle
 const navToggle = document.getElementById('navToggle');
