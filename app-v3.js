@@ -306,11 +306,13 @@ async function startDownload(e) {
     } catch {}
   }
 
-  // Trigger download dengan nama file unik
-  const proxyUrl = `/api/download?url=${encodeURIComponent(finalUrl)}&filename=${encodeURIComponent(filename)}&_t=${Date.now()}`;
+  // Trigger download langsung dari URL sumber — lebih cepat, tidak tertunda
+  // Nama file unik dipaksa via attribute download di tag <a>
   const a = document.createElement('a');
-  a.href = proxyUrl;
+  a.href = finalUrl;
   a.download = filename;
+  a.target = '_blank';
+  a.rel = 'noopener';
   a.style.display = 'none';
   document.body.appendChild(a);
   a.click();
