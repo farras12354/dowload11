@@ -1,5 +1,5 @@
 /* ============================================================
-   Zhafdor — app.js (DITULIS ULANG / DIBERSIHKAN — legacy)
+   Zhafdor ï¿½ app.js (DITULIS ULANG / DIBERSIHKAN ï¿½ legacy)
    ============================================================
    Lihat catatan di app-v2.js: video "hilang" karena (a) URL
    sumber asli ditawarkan sebagai unduhan, dan (b) URL media
@@ -36,6 +36,15 @@ function uniqueName(baseName, ext) {
   const ts = Date.now().toString(36);
   const rand = Math.random().toString(36).slice(2, 6);
   return `${sanitizeName(baseName)}_${ts}${rand}.${ext}`;
+}
+
+// Deteksi apakah URL menunjuk ke gambar (thumbnail/cover/foto), bukan file video.
+function isImageUrl(url) {
+  if (typeof url !== 'string') return false;
+  try {
+    const path = new URL(url).pathname.toLowerCase();
+    return /\.(jpg|jpeg|png|webp|gif)([?#]|$)/.test(path);
+  } catch { return false; }
 }
 
 // Validasi URL sebelum ditawarkan sebagai unduhan.
@@ -252,8 +261,12 @@ function collectItems(data) {
   const items = [];
   const d     = data.data || data;
 
-  const push = (label, badge, desc, url, isPrimary = false) => {
+  const push = (label, badge, desc, url, isPrimary = false, allowImage = false) => {
     if (typeof url !== 'string' || !url.startsWith('http')) return;
+    if (!allowImage && isImageUrl(url)) {
+      log('Ditolak (gambar, bukan video):', url);
+      return;
+    }
     const v = checkMediaUrl(url, _lastSourceUrl);
     if (!v.ok) {
       log('Ditolak [' + label + ']:', v.reason, '->', url);
@@ -290,14 +303,14 @@ function collectItems(data) {
   push('Video',         'MP4',    'Kualitas standar',   d.video || d.video_url || d.videoUrl || d.download || d.url, items.length === 0);
   push('Video SD',      'SD',     'Ukuran lebih hemat', d.video_sd || d.videoSd || d.sd,                      false);
   push('Audio',         'MP3',    'Hanya suara',        d.audio || d.audio_url || d.musicUrl || d.mp3,         false);
-  push('Foto',          'Gambar', 'Kualitas asli',      d.image || d.photo || d.img,                           false);
+  push('Foto',          'Gambar', 'Kualitas asli',      d.image || d.photo || d.img,                           false, true);
 
   if (d.qualities?.length)  d.qualities.forEach((q,i)  => push(q.label || q.quality || 'Video', 'MP4', q.size  || '', q.url  || q.link,  i===0));
   if (d.formats?.length)    d.formats.forEach((f,i)    => push(f.label || f.format  || 'Video', 'MP4', f.size  || '', f.url  || f.link,  i===0));
   if (d.links?.length)      d.links.forEach((l,i)      => push(l.label || l.type    || 'Unduhan','Tautan',l.quality||'',l.url||l.link, i===0));
   if (d.images?.length)     d.images.forEach((img,i)   => {
     const u = typeof img === 'string' ? img : (img?.url || img?.src);
-    push(`Gambar ${i+1}`, 'JPG', 'Resolusi penuh', u, false);
+    push(`Gambar ${i+1}`, 'JPG', 'Resolusi penuh', u, false, true);
   });
 
   if (items.length === 0) {
