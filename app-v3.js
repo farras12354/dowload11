@@ -306,40 +306,17 @@ async function startDownload(e) {
     } catch {}
   }
 
-  // Fetch blob di background — download langsung tanpa tertunda
-  try {
-    showNotice('Memulai unduhan...', 'info');
-    const response = await fetch(finalUrl, { 
-      headers: { 'User-Agent': 'Mozilla/5.0' },
-      mode: 'cors' 
-    });
-    if (response.ok) {
-      const blob    = await response.blob();
-      const blobUrl = URL.createObjectURL(blob);
-      const a       = document.createElement('a');
-      a.href        = blobUrl;
-      a.download    = filename;
-      a.style.display = 'none';
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(() => { URL.revokeObjectURL(blobUrl); document.body.removeChild(a); }, 3000);
-      hideNotice();
-    } else {
-      throw new Error('fetch gagal');
-    }
-  } catch {
-    // Fallback: buka langsung
-    hideNotice();
-    const a    = document.createElement('a');
-    a.href     = finalUrl;
-    a.download = filename;
-    a.target   = '_blank';
-    a.rel      = 'noopener';
-    a.style.display = 'none';
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => { try { document.body.removeChild(a); } catch {} }, 2000);
-  }
+  // Download langsung dari URL sumber — paling cepat
+  const a = document.createElement('a');
+  a.href = finalUrl;
+  a.download = filename;
+  a.target = '_blank';
+  a.rel = 'noopener noreferrer';
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { try { document.body.removeChild(a); } catch {} }, 2000);
+  hideNotice();
 
   // Reset tombol
   setTimeout(() => { btn.disabled = false; btn.innerHTML = orig; }, 3500);
