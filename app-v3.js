@@ -291,19 +291,23 @@ async function startDownload(e) {
   btn.disabled  = true;
   btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="animation:spin .7s linear infinite;display:inline-block"><path d="M12 2a10 10 0 0 1 10 10"/></svg> Unduh...`;
 
-  // Re-fetch URL segar untuk YouTube (URL-nya expire)
+  // SELALU re-fetch URL segar — semua URL Jagoan Project expire cepat
   let finalUrl = url;
-  if (_lastSourceUrl && _lastEndpoint && (url.includes('savetube') || url.includes('googlevideo'))) {
+  if (_lastSourceUrl && _lastEndpoint) {
     try {
+      showNotice('Menyiapkan unduhan...', 'info');
       const res  = await fetch(`${BASE}/${_lastEndpoint}?url=${encodeURIComponent(_lastSourceUrl)}`);
       const data = await res.json();
       if (data.status) {
-        const fresh = collectItems(data, title);
-        const isAud = ext === 'mp3';
-        const match = fresh.find(i => i.kind === (isAud ? 'audio' : 'video'));
-        if (match?.url) finalUrl = match.url;
+        const fresh  = collectItems(data, title);
+        const isAud  = ext === 'mp3';
+        const isImg  = ext === 'jpg';
+        const target = fresh.find(i => i.kind === (isAud ? 'audio' : isImg ? 'image' : 'video'));
+        if (target?.url) finalUrl = target.url;
+        else if (fresh[0]?.url) finalUrl = fresh[0].url;
       }
-    } catch {}
+      hideNotice();
+    } catch { hideNotice(); }
   }
 
   // Download langsung dari URL sumber — paling cepat
