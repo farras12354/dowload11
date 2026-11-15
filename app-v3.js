@@ -273,7 +273,7 @@ function createItem({ label, badge, desc, url, isPrimary, kind, title }) {
 }
 
 // ── Download — nama selalu UNIK ────────────────────────────────
-async function startDownload(e) {
+function startDownload(e) {
   e.preventDefault();
   const btn   = e.currentTarget;
   const url   = btn.dataset.url;
@@ -291,26 +291,12 @@ async function startDownload(e) {
   btn.disabled  = true;
   btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="animation:spin .7s linear infinite;display:inline-block"><path d="M12 2a10 10 0 0 1 10 10"/></svg> Unduh...`;
 
-  // SELALU re-fetch URL segar — semua URL Jagoan Project expire cepat
+  // Langsung trigger download dengan URL yang ada — tidak perlu tunggu re-fetch
   let finalUrl = url;
-  if (_lastSourceUrl && _lastEndpoint) {
-    try {
-      showNotice('Menyiapkan unduhan...', 'info');
-      const res  = await fetch(`${BASE}/${_lastEndpoint}?url=${encodeURIComponent(_lastSourceUrl)}`);
-      const data = await res.json();
-      if (data.status) {
-        const fresh  = collectItems(data, title);
-        const isAud  = ext === 'mp3';
-        const isImg  = ext === 'jpg';
-        const target = fresh.find(i => i.kind === (isAud ? 'audio' : isImg ? 'image' : 'video'));
-        if (target?.url) finalUrl = target.url;
-        else if (fresh[0]?.url) finalUrl = fresh[0].url;
-      }
-      hideNotice();
-    } catch { hideNotice(); }
-  }
 
-  // Download langsung dari URL sumber — paling cepat
+  // Trigger download sekarang juga
+  const uid      = Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+  const filename = `${sanitizeName(title)}_${uid}.${ext}`;
   const a = document.createElement('a');
   a.href = finalUrl;
   a.download = filename;
@@ -320,7 +306,6 @@ async function startDownload(e) {
   document.body.appendChild(a);
   a.click();
   setTimeout(() => { try { document.body.removeChild(a); } catch {} }, 2000);
-  hideNotice();
 
   // Reset tombol
   setTimeout(() => { btn.disabled = false; btn.innerHTML = orig; }, 3500);
