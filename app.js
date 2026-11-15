@@ -1,6 +1,10 @@
-﻿/* ============================================================
-   Zhafdor — app.js
-   Ditulis ulang bersih. Tidak ada bug duplicate/redundan.
+/* ============================================================
+   Zhafdor � app.js (DITULIS ULANG / DIBERSIHKAN � legacy)
+   ============================================================
+   Lihat catatan di app-v2.js: video "hilang" karena (a) URL
+   sumber asli ditawarkan sebagai unduhan, dan (b) URL media
+   kadaluarsa. Di sini sama: validasi URL + re-fetch segar +
+   log lengkap di console.
    ============================================================ */
 
 const BASE = '/api/downloader';
@@ -18,40 +22,68 @@ const PLATFORM_MAP = {
 let activePlatform = 'tiktok';
 let _lastSourceUrl = '';
 let _lastEndpoint  = '';
+const DEBUG = true;
 
-// Escape HTML untuk mencegah XSS
-const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
-  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function log(...args) { if (DEBUG) console.log('[Zhafdor]', ...args); }
 
-// Sanitize nama file
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
 function sanitizeName(name) {
-  return String(name || 'video')
-    .replace(/[/\\?%*:|"<>]/g, '_')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 80) || 'video';
+  return String(name || 'video').replace(/[/\\?%*:|"<>]/g, '_').replace(/\s+/g, ' ').trim().slice(0, 80) || 'video';
 }
 
-// Generate nama file unik — SELALU berbeda tiap klik
 function uniqueName(baseName, ext) {
-  const ts   = Date.now().toString(36);                       // e.g. "m5k2x"
-  const rand = Math.random().toString(36).slice(2, 6);       // e.g. "ab3f"
+  const ts = Date.now().toString(36);
+  const rand = Math.random().toString(36).slice(2, 6);
   return `${sanitizeName(baseName)}_${ts}${rand}.${ext}`;
 }
 
-// ── Platform tab switching ─────────────────────────────────────
+// Validasi URL sebelum ditawarkan sebagai unduhan.
+// Mengembalikan { ok, reason }; alasan dicatat ke console (F12 ? Console).
+function checkMediaUrl(url, sourceUrl = '') {
+  if (typeof url !== 'string' || !url.startsWith('http')) {
+    return { ok: false, reason: 'bukan URL http' };
+  }
+  let u;
+  try { u = new URL(url); } catch { return { ok: false, reason: 'URL tidak dapat diurai' }; }
+
+  let src = null;
+  try { src = sourceUrl ? new URL(sourceUrl) : null; } catch {}
+
+  // HINDARI: URL sumber asli (halaman sosial) disalahkan jadi file video.
+  if (src && u.hostname === src.hostname && u.pathname === src.pathname) {
+    return { ok: false, reason: 'URL sumber asli (halaman sosial), bukan file video langsung' };
+  }
+
+  // HINDARI: host halaman media sosial umum.
+  const social = ['tiktok.com','vm.tiktok.com','vt.tiktok.com','instagram.com','facebook.com','fb.watch','twitter.com','x.com','youtube.com','youtu.be','threads.net','pinterest.com','pin.it'];
+  if (social.some(h => u.hostname === h || u.hostname.endsWith('.' + h))) {
+    return { ok: false, reason: 'host halaman media sosial, bukan file media langsung' };
+  }
+
+  const path = u.pathname.toLowerCase();
+  const hasMediaExt = /\.(mp4|mp3|m4a|aac|ogg|webm|mov|avi|jpg|jpeg|png|webp|gif)([?#]|$)/.test(path);
+  const isMediaHost = /googlevideo|videoplayback|facebookcdn|cdninstagram|tiktokcdn|ttcdn|media\.|cdn\./.test(u.hostname) || /videoplayback|googlevideo/.test(u.pathname + u.search);
+
+  if (!hasMediaExt && !isMediaHost) {
+    return { ok: false, reason: 'tidak terdeteksi sebagai file media (tanpa ekstensi media/host CDN)' };
+  }
+  return { ok: true };
+}
+
+// -- Platform tab switching --
 document.querySelectorAll('.platform-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.platform-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     activePlatform = btn.dataset.platform;
     const hints = {
-      tiktok:    'https://www.tiktok.com/@user/video/...',
+      tiktok: 'https://www.tiktok.com/@user/video/...',
       instagram: 'https://www.instagram.com/p/... atau /reel/...',
-      youtube:   'https://www.youtube.com/watch?v=...',
-      twitter:   'https://twitter.com/user/status/...',
-      facebook:  'https://www.facebook.com/watch?v=...',
-      threads:   'https://www.threads.net/@user/post/...',
+      youtube: 'https://www.youtube.com/watch?v=...',
+      twitter: 'https://twitter.com/user/status/...',
+      facebook: 'https://www.facebook.com/watch?v=...',
+      threads: 'https://www.threads.net/@user/post/...',
       pinterest: 'https://www.pinterest.com/pin/...',
     };
     document.getElementById('urlInput').placeholder = hints[activePlatform] || 'Tempel tautan video...';
@@ -60,23 +92,22 @@ document.querySelectorAll('.platform-btn').forEach(btn => {
   });
 });
 
-// ── Auto-detect platform saat paste ───────────────────────────
+// -- Auto-detect platform saat paste --
 document.getElementById('urlInput').addEventListener('paste', e => {
   setTimeout(() => {
     const val = e.target.value;
     const map = {
-      'tiktok.com':'tiktok','vm.tiktok.com':'tiktok','vt.tiktok.com':'tiktok',
-      'instagram.com':'instagram',
-      'youtube.com':'youtube','youtu.be':'youtube',
-      'twitter.com':'twitter','x.com':'twitter',
-      'facebook.com':'facebook','fb.watch':'facebook',
-      'threads.net':'threads',
-      'pinterest.com':'pinterest','pin.it':'pinterest',
+      'tiktok.com': 'tiktok', 'vm.tiktok.com': 'tiktok', 'vt.tiktok.com': 'tiktok',
+      'instagram.com': 'instagram',
+      'youtube.com': 'youtube', 'youtu.be': 'youtube',
+      'twitter.com': 'twitter', 'x.com': 'twitter',
+      'facebook.com': 'facebook', 'fb.watch': 'facebook',
+      'threads.net': 'threads',
+      'pinterest.com': 'pinterest', 'pin.it': 'pinterest',
     };
     for (const [host, platform] of Object.entries(map)) {
       if (val.includes(host)) {
-        document.querySelectorAll('.platform-btn').forEach(b =>
-          b.classList.toggle('active', b.dataset.platform === platform));
+        document.querySelectorAll('.platform-btn').forEach(b => b.classList.toggle('active', b.dataset.platform === platform));
         activePlatform = platform;
         break;
       }
@@ -89,27 +120,24 @@ document.getElementById('urlInput').addEventListener('keydown', e => {
   if (e.key === 'Enter') fetchDownload();
 });
 
-// ── Fetch video ────────────────────────────────────────────────
 async function fetchDownload() {
   const inputVal = document.getElementById('urlInput').value.trim();
   if (!inputVal) { showNotice('Masukkan tautan video terlebih dahulu.', 'error'); return; }
 
-  // Auto-detect platform
-  const urlMap = {
-    'tiktok.com':'tiktok','vm.tiktok.com':'tiktok','vt.tiktok.com':'tiktok',
-    'instagram.com':'instagram',
-    'youtube.com':'youtube','youtu.be':'youtube',
-    'twitter.com':'twitter','x.com':'twitter',
-    'facebook.com':'facebook','fb.watch':'facebook',
-    'threads.net':'threads',
-    'pinterest.com':'pinterest','pin.it':'pinterest',
+  const map = {
+    'tiktok.com': 'tiktok', 'vm.tiktok.com': 'tiktok', 'vt.tiktok.com': 'tiktok',
+    'instagram.com': 'instagram',
+    'youtube.com': 'youtube', 'youtu.be': 'youtube',
+    'twitter.com': 'twitter', 'x.com': 'twitter',
+    'facebook.com': 'facebook', 'fb.watch': 'facebook',
+    'threads.net': 'threads',
+    'pinterest.com': 'pinterest', 'pin.it': 'pinterest',
   };
   try {
     const hostname = new URL(inputVal).hostname.replace('www.', '');
-    for (const [host, platform] of Object.entries(urlMap)) {
+    for (const [host, platform] of Object.entries(map)) {
       if (hostname.includes(host)) {
-        document.querySelectorAll('.platform-btn').forEach(b =>
-          b.classList.toggle('active', b.dataset.platform === platform));
+        document.querySelectorAll('.platform-btn').forEach(b => b.classList.toggle('active', b.dataset.platform === platform));
         activePlatform = platform;
         break;
       }
@@ -125,33 +153,32 @@ async function fetchDownload() {
   _lastEndpoint  = endpoint;
 
   const controller = new AbortController();
-  const tid = setTimeout(() => controller.abort(), 25000);
+  const timeoutId = setTimeout(() => controller.abort(), 25000);
 
   try {
-    const res  = await fetch(`${BASE}/${endpoint}?url=${encodeURIComponent(inputVal)}`, { signal: controller.signal });
-    clearTimeout(tid);
+    log('=== fetchDownload ===');
+    log('Endpoint:', endpoint, '| Platform:', label, '| URL:', inputVal);
+    const res = await fetch(`${BASE}/${endpoint}?url=${encodeURIComponent(inputVal)}&_t=${Date.now()}`, { signal: controller.signal, cache: 'no-store' });
+    clearTimeout(timeoutId);
     const data = await res.json();
+    log('Respon API mentah:', data);
 
     if (!data.status) {
-      showNotice(data.message || 'Gagal memproses tautan. Pastikan link valid dan video publik.', 'error');
+      showNotice(data.message || 'Gagal memproses tautan. Pastikan link valid dan video bersifat publik.', 'error');
       return;
     }
     renderResult(data, label);
-
   } catch (err) {
-    clearTimeout(tid);
-    showNotice(err.name === 'AbortError'
-      ? 'Permintaan timeout. Coba lagi.'
-      : 'Gagal terhubung ke server. Coba lagi.', 'error');
+    clearTimeout(timeoutId);
+    if (err.name === 'AbortError') showNotice('Permintaan melebihi batas waktu. Coba lagi.', 'error');
+    else showNotice('Gagal terhubung ke server. Coba lagi.', 'error');
     console.error(err);
   } finally {
     setLoading(false);
   }
 }
-
-// ── Render hasil ───────────────────────────────────────────────
+// -- Render hasil --
 function renderResult(data, platformLabel) {
-  // Thumbnail
   const thumbWrap = document.getElementById('thumbWrap');
   const thumb = data.thumbnail || data.thumb || data.cover
     || data.data?.thumbnail || data.data?.thumb
@@ -163,11 +190,9 @@ function renderResult(data, platformLabel) {
   } else {
     thumbWrap.innerHTML = `<div class="result-thumb-placeholder">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7a879a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="3" y="3" width="18" height="18" rx="3"/><path d="m9 10 6 4-6 4V10z"/>
-      </svg></div>`;
+        <rect x="3" y="3" width="18" height="18" rx="3"/><path d="m9 10 6 4-6 4V10z"/></svg></div>`;
   }
 
-  // Title & author
   const title = data.title || data.data?.title || data.caption || data.data?.caption
     || data.result?.metadata?.caption || 'Video';
   let author = data.author || data.data?.author || data.uploader || data.data?.uploader
@@ -179,10 +204,9 @@ function renderResult(data, platformLabel) {
   document.getElementById('resultAuthor').textContent  = author ? `@${String(author).replace(/^@/, '')}` : platformLabel;
   document.getElementById('resultPlatform').textContent = platformLabel;
 
-  // Kumpulkan item download
   const items = collectItems(data);
+  log('Item unduhan valid:', items.map(i => ({ label: i.label, url: i.url })));
 
-  // Video preview
   const d = data.data || data;
   let previewUrl = Array.isArray(d.downloads) && d.downloads[0]?.sourceUrl
     ? d.downloads[0].sourceUrl
@@ -195,16 +219,22 @@ function renderResult(data, platformLabel) {
 
   const videoWrap = document.getElementById('videoWrap');
   if (previewUrl) {
-    videoWrap.style.display = 'block';
-    videoWrap.innerHTML = `<video class="video-preview" controls playsinline preload="metadata" referrerpolicy="no-referrer">
-      <source src="${esc(previewUrl)}" type="video/mp4">
-    </video>`;
+    const vres = checkMediaUrl(previewUrl, _lastSourceUrl);
+    if (vres.ok) {
+      videoWrap.style.display = 'block';
+      videoWrap.innerHTML = `<video class="video-preview" controls playsinline preload="metadata" referrerpolicy="no-referrer">
+        <source src="${esc(previewUrl)}" type="video/mp4">
+      </video>`;
+    } else {
+      log('Preview ditolak:', vres.reason);
+      videoWrap.style.display = 'none';
+      videoWrap.innerHTML = '';
+    }
   } else {
     videoWrap.style.display = 'none';
     videoWrap.innerHTML = '';
   }
 
-  // Daftar download
   const list = document.getElementById('downloadList');
   list.innerHTML = '';
   if (items.length === 0) {
@@ -217,24 +247,27 @@ function renderResult(data, platformLabel) {
   document.getElementById('result').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
-// ── Kumpulkan item download ────────────────────────────────────
+// -- Kumpulkan item download (dengan validasi checkMediaUrl) --
 function collectItems(data) {
   const items = [];
   const d     = data.data || data;
 
   const push = (label, badge, desc, url, isPrimary = false) => {
-    if (typeof url === 'string' && url.startsWith('http'))
-      items.push({ label, badge, desc, url, isPrimary });
+    if (typeof url !== 'string' || !url.startsWith('http')) return;
+    const v = checkMediaUrl(url, _lastSourceUrl);
+    if (!v.ok) {
+      log('Ditolak [' + label + ']:', v.reason, '->', url);
+      return;
+    }
+    items.push({ label, badge, desc, url, isPrimary });
   };
 
-  // YouTube
   if (Array.isArray(d.files)) {
     d.files.forEach((f, i) =>
       push(f.quality || `Video ${i+1}`, f.contentType?.includes('audio') ? 'MP3' : 'MP4',
         f.filename || '', f.url, i === 0));
   }
 
-  // TikTok
   if (Array.isArray(d.downloads)) {
     const dl = d.downloads[0];
     if (dl) {
@@ -243,7 +276,6 @@ function collectItems(data) {
     }
   }
 
-  // Instagram
   const media = d.media || d.result?.media;
   if (media?.videos?.length) {
     media.videos.forEach((v, i) =>
@@ -268,19 +300,18 @@ function collectItems(data) {
     push(`Gambar ${i+1}`, 'JPG', 'Resolusi penuh', u, false);
   });
 
-  // Fallback
   if (items.length === 0) {
     Object.values(d).forEach(v => {
       if (typeof v === 'string' && v.startsWith('http') &&
           /\.(mp4|mp3|jpg|jpeg|png|webm|webp)/.test(v))
-        push('File', 'Langsung', '', v, false);
+        push('File', 'Langsudh', '', v, false);
     });
   }
 
   return items;
 }
 
-// ── Buat elemen item download ──────────────────────────────────
+// -- Buat elemen item download --
 function createItem({ label, badge, desc, url, isPrimary }, idx, videoTitle) {
   if (typeof url !== 'string') return document.createElement('div');
 
@@ -298,10 +329,11 @@ function createItem({ label, badge, desc, url, isPrimary }, idx, videoTitle) {
 
   const dlSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M8 11l4 4 4-4M5 20h14"/></svg>';
 
-  // Nama file unik — timestamp + random agar tidak pernah sama
   const fileExt  = isAudio ? 'mp3' : isImage ? (ext || 'jpg') : 'mp4';
   const baseName = sanitizeName(videoTitle || label);
-  // nama disimpan di data attribute, dibuat baru tiap klik
+  const uid      = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  const filename = `${sanitizeName(baseName)}_${uid}.${fileExt}`;
+
   const urlEsc   = esc(url);
   const baseEsc  = esc(baseName);
   const extEsc   = esc(fileExt);
@@ -328,8 +360,7 @@ function createItem({ label, badge, desc, url, isPrimary }, idx, videoTitle) {
   `;
   return el;
 }
-
-// ── Download ───────────────────────────────────────────────────
+// -- Download --
 async function startDownload(e) {
   e.preventDefault();
   const btn      = e.currentTarget;
@@ -339,24 +370,21 @@ async function startDownload(e) {
 
   if (!url) return;
 
-  // Nama file UNIK setiap klik — tidak akan pernah sama
   const uid      = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   const filename = `${sanitizeName(baseName)}_${uid}.${fileExt}`;
 
-  // Visual feedback
   const origHTML = btn.innerHTML;
   btn.disabled   = true;
   btn.innerHTML  = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="animation:spin .7s linear infinite"><path d="M12 2a10 10 0 0 1 10 10"/></svg> Unduh...`;
 
-  // Re-fetch URL segar kalau YouTube (URL-nya expire)
+  // Re-fetch URL segar (semua platform) supaya link tidak expired.
   let finalUrl = url;
-  if (_lastSourceUrl && _lastEndpoint && (url.includes('savetube') || url.includes('googlevideo'))) {
+  if (_lastSourceUrl && _lastEndpoint) {
     try {
-      const res  = await fetch(`${BASE}/${_lastEndpoint}?url=${encodeURIComponent(_lastSourceUrl)}`);
+      const res  = await fetch(`${BASE}/${_lastEndpoint}?url=${encodeURIComponent(_lastSourceUrl)}&_t=${Date.now()}`, { cache: 'no-store' });
       const data = await res.json();
       if (data.status) {
         const fresh = collectItems(data);
-        // Ambil URL dari item dengan ekstensi yang sama
         const match = fresh.find(i => i.url && i.url.includes(fileExt === 'mp3' ? 'audio' : 'video'));
         if (match?.url) finalUrl = match.url;
         else if (fresh[0]?.url) finalUrl = fresh[0].url;
@@ -364,7 +392,15 @@ async function startDownload(e) {
     } catch {}
   }
 
-  // Trigger download via proxy — nama file sudah unik
+  const cek = checkMediaUrl(finalUrl, _lastSourceUrl);
+  if (!cek.ok) {
+    log('Unduhan dibatalkan:', cek.reason, '->', finalUrl);
+    showNotice('Tautan tidak aman untuk diunduh (bukan file video langsung).', 'error');
+    btn.disabled  = false;
+    btn.innerHTML = origHTML;
+    return;
+  }
+
   const proxyUrl = `/api/download?url=${encodeURIComponent(finalUrl)}&filename=${encodeURIComponent(filename)}&_t=${Date.now()}`;
   const a        = document.createElement('a');
   a.href         = proxyUrl;
@@ -374,7 +410,6 @@ async function startDownload(e) {
   a.click();
   setTimeout(() => { try { document.body.removeChild(a); } catch {} }, 2000);
 
-  // Reset tombol
   setTimeout(() => {
     btn.disabled  = false;
     btn.innerHTML = origHTML;
@@ -386,7 +421,7 @@ const forceDownload = (url, label) => {
   startDownload(e);
 };
 
-// ── UI helpers ─────────────────────────────────────────────────
+// -- UI helpers --
 function setLoading(on) {
   const btn     = document.getElementById('fetchBtn');
   const spinner = document.getElementById('spinner');
@@ -404,11 +439,10 @@ function showNotice(msg, type = 'info') {
   el.className     = `notice ${type}`;
   el.style.display = 'block';
 }
-
 function hideNotice() { document.getElementById('notice').style.display = 'none'; }
 function hideResult()  { document.getElementById('result').style.display  = 'none'; }
 
-// ── Mobile nav ─────────────────────────────────────────────────
+// -- Mobile nav --
 const navToggle = document.getElementById('navToggle');
 const navLinks  = document.getElementById('navLinks');
 if (navToggle && navLinks) {
