@@ -56,6 +56,15 @@ module.exports = async (req, res) => {
     }
 
     const contentType = upstreamRes.headers.get('content-type') || 'video/mp4';
+    const isMp4 = contentType.includes('mp4') || rawFilename.toLowerCase().endsWith('.mp4');
+
+    // Buat box 'free' standar MP4 (16 bytes) dengan ID unik agar hash file selalu berbeda
+    // Ini mencegah galeri HP mendeteksi unduhan kedua sebagai duplikat dan menghapusnya otomatis!
+    const uniqueBox = Buffer.alloc(16);
+    uniqueBox.writeUInt32BE(16, 0);
+    uniqueBox.write('free', 4, 4, 'ascii');
+    uniqueBox.writeBigUInt64BE(BigInt(Date.now()) ^ BigInt(Math.floor(Math.random() * 1e9)), 8);
+
     const responseHeaders = {
       'Content-Type': contentType,
       'Content-Disposition': `attachment; filename="${safeAscii}"; filename*=UTF-8''${encodeURIComponent(rawFilename)}`,
@@ -65,9 +74,16 @@ module.exports = async (req, res) => {
       'Expires': '0'
     };
 
-    if (upstreamRes.headers.has('content-length')) {
+    // Jika bukan range request, tambahkan panjang box unique ke Content-Length
+    if (upstreamRes.headers.has('content-length') && !req.headers.range) {
+      const originalLen = parseInt(upstreamRes.headers.get('content-length'), 10);
+      if (!isNaN(originalLen)) {
+        responseHeaders['Content-Length'] = String(originalLen + (isMp4 ? 16 : 0));
+      }
+    } else if (upstreamRes.headers.has('content-length')) {
       responseHeaders['Content-Length'] = upstreamRes.headers.get('content-length');
     }
+
     if (upstreamRes.headers.has('accept-ranges')) {
       responseHeaders['Accept-Ranges'] = upstreamRes.headers.get('accept-ranges');
     }
@@ -76,7 +92,22 @@ module.exports = async (req, res) => {
     }
 
     res.writeHead(upstreamRes.status === 206 ? 206 : 200, responseHeaders);
-    Readable.fromWeb(upstreamRes.body).pipe(res);
+
+    // Stream body upstream, lalu di ujungnya tambahkan box unik jika MP4
+    const reader = upstreamRes.body.getReader();
+    async function* makeStream() {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        yield value;
+      }
+      if (isMp4 && !req.headers.range) {
+        yield uniqueBox;
+      }
+    }
+
+    res.on('close', () => reader.cancel().catch(() => {}));
+    Readable.from(makeStream()).pipe(res);
   } catch (err) {
     if (!res.headersSent) {
       return res.status(500).send('Gagal mengunduh file: ' + err.message);
