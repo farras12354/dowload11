@@ -30,6 +30,7 @@ document.querySelectorAll('.platform-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.platform-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
+    try { btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }); } catch {}
     activePlatform = btn.dataset.platform;
     const hints = {
       tiktok:'https://www.tiktok.com/@user/video/...',
@@ -57,8 +58,13 @@ document.getElementById('urlInput').addEventListener('paste', e => {
     };
     for (const [h, p] of Object.entries(map)) {
       if (v.includes(h)) {
-        document.querySelectorAll('.platform-btn').forEach(b =>
-          b.classList.toggle('active', b.dataset.platform === p));
+        document.querySelectorAll('.platform-btn').forEach(b => {
+          const isMatch = b.dataset.platform === p;
+          b.classList.toggle('active', isMatch);
+          if (isMatch) {
+            try { b.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }); } catch {}
+          }
+        });
         activePlatform = p;
         break;
       }
