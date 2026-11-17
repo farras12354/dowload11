@@ -69,10 +69,15 @@ module.exports = async (req, res) => {
     uniqueBox.write('free', 4, 4, 'ascii');
     uniqueBox.writeBigUInt64BE(BigInt(Date.now()) ^ BigInt(Math.floor(Math.random() * 1e9)), 8);
 
+    const origin = req.headers.origin || '';
+    const allowedOrigin = origin && (origin.includes('zhaffdownloader.web.id') || origin.endsWith('.vercel.app') || origin.includes('localhost'))
+      ? origin
+      : 'https://zhaffdownloader.web.id';
+
     const responseHeaders = {
       'Content-Type': contentType,
       'Content-Disposition': `attachment; filename="${safeAscii}"; filename*=UTF-8''${encodeURIComponent(rawFilename)}`,
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': allowedOrigin,
       'Cache-Control': 'no-cache, no-store, must-revalidate',
       'Pragma': 'no-cache',
       'Expires': '0'
