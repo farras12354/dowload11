@@ -43,8 +43,14 @@ module.exports = async (req, res) => {
     return res.status(400).json({ status: false, message: 'Parameter endpoint dan url wajib diisi.' });
   }
 
-  // Gunakan Environment Variable dari Vercel / server (dengan fallback jika belum di-set di Vercel)
-  const apiKey = process.env.JAGOAN_API_KEY || 'jg_5aX1pnEz6zdGt2iCsliExJlX';
+  // Baca API Key rahasia secara aman dari Environment Variables Vercel
+  const apiKey = process.env.JAGOAN_API_KEY;
+  if (!apiKey) {
+    return res.status(500).json({
+      status: false,
+      message: 'Konfigurasi server belum lengkap: JAGOAN_API_KEY belum disetel di Vercel Environment Variables.'
+    });
+  }
 
   try {
     const apiUrl = `https://api.jagoanproject.com/api/downloader/${endpoint}?url=${encodeURIComponent(targetUrl)}`;

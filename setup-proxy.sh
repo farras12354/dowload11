@@ -34,7 +34,7 @@ server {
         proxy_pass https://api.jagoanproject.com/api/;
         proxy_ssl_server_name on;
         proxy_set_header Host api.jagoanproject.com;
-        proxy_set_header Authorization "Bearer jg_5aX1pnEz6zdGt2iCsliExJlX";
+        proxy_set_header Authorization "Bearer ${JAGOAN_API_KEY:-YOUR_API_KEY}";
         proxy_set_header X-Real-IP $remote_addr;
 
         proxy_buffer_size 128k;
@@ -76,7 +76,7 @@ server {
         proxy_pass https://api.jagoanproject.com/api/;
         proxy_ssl_server_name on;
         proxy_set_header Host api.jagoanproject.com;
-        proxy_set_header Authorization "Bearer jg_5aX1pnEz6zdGt2iCsliExJlX";
+        proxy_set_header Authorization "Bearer ${JAGOAN_API_KEY:-YOUR_API_KEY}";
         proxy_set_header X-Real-IP $remote_addr;
 
         proxy_buffer_size 128k;
