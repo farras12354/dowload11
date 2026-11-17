@@ -31,7 +31,11 @@ module.exports = async (req, res) => {
   const safeAscii = rawFilename.replace(/[^a-zA-Z0-9._-]/g, '_');
 
   try {
-    new URL(fileUrl);
+    const parsed = new URL(fileUrl);
+    // Jika URL Savetube (YouTube), redirect langsung ke CDN agar tidak terkena batas waktu Vercel (15 detik)
+    if (parsed.hostname.includes('savetube.vip') || parsed.hostname.includes('savetube.me')) {
+      return res.redirect(302, fileUrl);
+    }
   } catch (err) {
     return res.status(400).send('URL tidak valid.');
   }

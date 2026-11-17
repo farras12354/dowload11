@@ -353,29 +353,41 @@ function handleDownloadClick(e) {
 }
 
 // ── Eksekusi Unduhan Langsung (Tanpa Tertunda) ───────────────────
-function startDirectDownload(btn, url, title, ext, isRepeat = false) {
+async function startDirectDownload(btn, url, title, ext, isRepeat = false) {
   const orig = btn.innerHTML;
   btn.disabled  = true;
-  btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="animation:spin .7s linear infinite;display:inline-block"><path d="M12 2a10 10 0 0 1 10 10"/></svg> Mengunduh...`;
+  btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="animation:spin .7s linear infinite;display:inline-block"><path d="M12 2a10 10 0 0 1 10 10"/></svg> Menyiapkan...`;
+
+  let downloadUrl = url;
+
+  // Khusus YouTube: link Savetube cepat expired (hanya 1-2 menit), jadi re-fetch link baru saat klik Unduh
+  if (activePlatform === 'youtube' && _lastSourceUrl) {
+    try {
+      showNotice('Menyiapkan tautan video YouTube...', 'info');
+      const res = await fetch(`${BASE}/youtube-download?url=${encodeURIComponent(_lastSourceUrl)}&_t=${Date.now()}`);
+      const data = await res.json();
+      if (data.status && Array.isArray(data.data?.files) && data.data.files[0]?.url) {
+        downloadUrl = data.data.files[0].url;
+      }
+    } catch (e) {
+      console.warn('Re-fetch YouTube gagal, gunakan URL awal');
+    }
+  }
 
   // Nama file unik agar tersimpan berdampingan di galeri
   const baseName = sanitizeName(title);
-  let finalFilename = '';
-  if (isRepeat) {
-    finalFilename = `${baseName}_salinan(${_repeatCount}).${ext}`;
-  } else {
-    finalFilename = `${baseName}.${ext}`;
-  }
+  let finalFilename = isRepeat ? `${baseName}_salinan(${_repeatCount}).${ext}` : `${baseName}.${ext}`;
 
-  // Lewatkan ke proxy download server kita agar browser HP menerima header attachment langsung
-  // dan TIDAK PERNAH status tertunda!
-  const dlUrl = `/api/download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(finalFilename)}&_t=${Date.now()}`;
+  // Jika URL Savetube (YouTube), langsung download dari CDN Savetube agar tidak terpotong batas waktu Vercel (15 detik)
+  let triggerUrl = downloadUrl;
+  if (!downloadUrl.includes('savetube')) {
+    triggerUrl = `/api/download?url=${encodeURIComponent(downloadUrl)}&filename=${encodeURIComponent(finalFilename)}&_t=${Date.now()}`;
+  }
 
   showNotice(isRepeat ? 'Mengunduh salinan video ke galeri...' : 'Mengunduh video ke galeri...', 'info');
 
-  // Trigger download same-origin — langsung ditangkap download manager HP tanpa jeda/tertunda!
   const a = document.createElement('a');
-  a.href = dlUrl;
+  a.href = triggerUrl;
   a.download = finalFilename;
   a.style.display = 'none';
   document.body.appendChild(a);
