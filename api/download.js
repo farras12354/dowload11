@@ -32,8 +32,8 @@ module.exports = async (req, res) => {
 
   try {
     const parsed = new URL(fileUrl);
-    // Jika URL Savetube (YouTube), redirect langsung ke CDN agar tidak terkena batas waktu Vercel (15 detik)
-    if (parsed.hostname.includes('savetube.vip') || parsed.hostname.includes('savetube.me')) {
+    // Jika URL YouTube (Google Video / Savetube), redirect langsung agar tidak diblokir 403 oleh Google dan tidak kena timeout 15 detik Vercel
+    if (parsed.hostname.includes('googlevideo.com') || parsed.hostname.includes('savetube')) {
       return res.redirect(302, fileUrl);
     }
   } catch (err) {

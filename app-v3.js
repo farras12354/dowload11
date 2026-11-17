@@ -378,19 +378,24 @@ async function startDirectDownload(btn, url, title, ext, isRepeat = false) {
   const baseName = sanitizeName(title);
   let finalFilename = isRepeat ? `${baseName}_salinan(${_repeatCount}).${ext}` : `${baseName}.${ext}`;
 
-  // Jika URL Savetube (YouTube), langsung download dari CDN Savetube agar tidak terpotong batas waktu Vercel (15 detik)
-  let triggerUrl = downloadUrl;
-  if (!downloadUrl.includes('savetube')) {
-    triggerUrl = `/api/download?url=${encodeURIComponent(downloadUrl)}&filename=${encodeURIComponent(finalFilename)}&_t=${Date.now()}`;
-  }
+  // Jika URL YouTube (googlevideo / savetube), gunakan URL langsung agar tidak diblokir Google 403
+  const isDirect = downloadUrl.includes('googlevideo.com') || downloadUrl.includes('savetube');
+  const targetUrl = isDirect
+    ? downloadUrl
+    : `/api/download?url=${encodeURIComponent(downloadUrl)}&filename=${encodeURIComponent(finalFilename)}&_t=${Date.now()}`;
 
   showNotice(isRepeat ? 'Mengunduh salinan video ke galeri...' : 'Mengunduh video ke galeri...', 'info');
 
-  const dlUrl = `/api/download?url=${encodeURIComponent(downloadUrl)}&filename=${encodeURIComponent(finalFilename)}&_t=${Date.now()}`;
-
-  // Gunakan window.location.href — karena response server adalah file attachment,
-  // browser TIDAK AKAN pindah halaman dan langsung memicu unduhan di pojok kanan atas!
-  window.location.href = dlUrl;
+  // Trigger download via anchor click agar address bar halaman TIDAK BERUBAH!
+  const a = document.createElement('a');
+  a.href = targetUrl;
+  a.download = finalFilename;
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    try { a.remove(); } catch {}
+  }, 1000);
 
   setTimeout(() => {
     btn.disabled = false;
