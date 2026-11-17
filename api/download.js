@@ -9,7 +9,6 @@ module.exports = async (req, res) => {
   }
 
   // Jika URL dari Jagoan Project dl-..., ekstrak URL target aslinya dari base64 token
-  // agar tidak terkena 502 Bad Gateway dari server Jagoan
   if (fileUrl.includes('api.jagoanproject.com/api/dl-')) {
     try {
       const match = fileUrl.match(/\/api\/dl-(?:I)?([A-Za-z0-9_-]+)/);
@@ -22,9 +21,7 @@ module.exports = async (req, res) => {
           fileUrl = parsedJson.u;
         }
       }
-    } catch (e) {
-      // Jika decode gagal, lanjutkan dengan fileUrl yang ada
-    }
+    } catch (e) {}
   }
 
   // Pastikan memiliki ekstensi file yang valid
@@ -55,10 +52,10 @@ module.exports = async (req, res) => {
     });
 
     if (!upstreamRes.ok && upstreamRes.status >= 400) {
-      return res.status(upstreamRes.status).send('Server asal menolak unduhan atau tautan kadaluarsa.');
+      return res.status(upstreamRes.status).send('Gagal mengunduh file dari server asal.');
     }
 
-    const contentType = upstreamRes.headers.get('content-type') || 'application/octet-stream';
+    const contentType = upstreamRes.headers.get('content-type') || 'video/mp4';
     const responseHeaders = {
       'Content-Type': contentType,
       'Content-Disposition': `attachment; filename="${safeAscii}"; filename*=UTF-8''${encodeURIComponent(rawFilename)}`,
