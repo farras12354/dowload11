@@ -386,15 +386,11 @@ async function startDirectDownload(btn, url, title, ext, isRepeat = false) {
 
   showNotice(isRepeat ? 'Mengunduh salinan video ke galeri...' : 'Mengunduh video ke galeri...', 'info');
 
-  // Trigger download di latar belakang menggunakan hidden iframe agar TIDAK PERNAH pindah halaman!
-  let dlFrame = document.getElementById('_downloadFrame');
-  if (!dlFrame) {
-    dlFrame = document.createElement('iframe');
-    dlFrame.id = '_downloadFrame';
-    dlFrame.style.display = 'none';
-    document.body.appendChild(dlFrame);
-  }
-  dlFrame.src = triggerUrl;
+  const dlUrl = `/api/download?url=${encodeURIComponent(downloadUrl)}&filename=${encodeURIComponent(finalFilename)}&_t=${Date.now()}`;
+
+  // Gunakan window.location.href — karena response server adalah file attachment,
+  // browser TIDAK AKAN pindah halaman dan langsung memicu unduhan di pojok kanan atas!
+  window.location.href = dlUrl;
 
   setTimeout(() => {
     btn.disabled = false;
