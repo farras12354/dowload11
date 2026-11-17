@@ -386,21 +386,21 @@ async function startDirectDownload(btn, url, title, ext, isRepeat = false) {
 
   showNotice(isRepeat ? 'Mengunduh salinan video ke galeri...' : 'Mengunduh video ke galeri...', 'info');
 
-  const a = document.createElement('a');
-  a.href = triggerUrl;
-  a.download = finalFilename;
-  a.style.display = 'none';
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(() => {
-    try { a.remove(); } catch {}
-  }, 1000);
+  // Trigger download di latar belakang menggunakan hidden iframe agar TIDAK PERNAH pindah halaman!
+  let dlFrame = document.getElementById('_downloadFrame');
+  if (!dlFrame) {
+    dlFrame = document.createElement('iframe');
+    dlFrame.id = '_downloadFrame';
+    dlFrame.style.display = 'none';
+    document.body.appendChild(dlFrame);
+  }
+  dlFrame.src = triggerUrl;
 
   setTimeout(() => {
     btn.disabled = false;
     btn.innerHTML = orig;
     hideNotice();
-  }, 3000);
+  }, 3500);
 }
 
 // ── UI Helpers ─────────────────────────────────────────────────
